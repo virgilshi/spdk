@@ -1,0 +1,965 @@
+From 2f2ffd98b011a764aab9d00b6e4aa2b303bfd6d3 Mon Sep 17 00:00:00 2001
+From: paul luse <paul.e.luse@intel.com>
+Date: Wed, 4 Sep 2019 10:54:36 -0400
+Subject: [PATCH] test: remove test plan .md files
+
+A sub-team over a year ago agreed that there was not enough value
+in checking test plans in to the repo as they require maintenance
+and their primary purpose is not to document how the module is tested
+but to facilitate discussion during test development. It was agreed
+that we would use the review system to iterate on test plans but once
+the actual tests were developed that the plan would not get checked in.
+
+This patch just removes those that were likely in the repo before that
+discussion.
+
+Signed-off-by: paul luse <paul.e.luse@intel.com>
+Change-Id: I75dcdd8b4754b7ecb4a21079b251c707557a3280
+Reviewed-on: https://review.gerrithub.io/c/spdk/spdk/+/467394
+Tested-by: SPDK CI Jenkins <sys_sgci@intel.com>
+Reviewed-by: Karol Latecki <karol.latecki@intel.com>
+Reviewed-by: Jim Harris <james.r.harris@intel.com>
+Reviewed-by: Shuhei Matsumoto <shuhei.matsumoto.xt@hitachi.com>
+---
+ test/blobfs/test_plan.md         |  67 ---------
+ test/iscsi_tgt/test_plan.md      |  41 ------
+ test/nvmf/test_plan.md           |  95 ------------
+ test/pmem/test_plan.md           | 310 ---------------------------------------
+ test/vhost/hotplug/test_plan.md  |  86 -----------
+ test/vhost/readonly/test_plan.md |  30 ----
+ test/vhost/test_plan.md          | 252 -------------------------------
+ 7 files changed, 881 deletions(-)
+ delete mode 100644 test/blobfs/test_plan.md
+ delete mode 100644 test/iscsi_tgt/test_plan.md
+ delete mode 100644 test/nvmf/test_plan.md
+ delete mode 100644 test/pmem/test_plan.md
+ delete mode 100644 test/vhost/hotplug/test_plan.md
+ delete mode 100644 test/vhost/readonly/test_plan.md
+ delete mode 100644 test/vhost/test_plan.md
+
+diff --git a/test/blobfs/test_plan.md b/test/blobfs/test_plan.md
+deleted file mode 100644
+index 080427b..0000000
+--- a/test/blobfs/test_plan.md
++++ /dev/null
+@@ -1,67 +0,0 @@
+-# SPDK BlobFS Test Plan
+-
+-## Current Tests
+-
+-# Unit tests (asynchronous API)
+-
+-- Tests BlobFS w/ Blobstore with no dependencies on SPDK bdev layer or event framework.
+-  Uses simple DRAM buffer to simulate a block device - all block operations are immediately
+-  completed so no special event handling is required.
+-- Current tests include:
+-	- basic fs initialization and unload
+-	- open non-existent file fails if SPDK_BLOBFS_OPEN_CREATE not specified
+-	- open non-existent file creates the file if SPDK_BLOBFS_OPEN_CREATE is specified
+-	- close a file fails if there are still open references
+-	- closing a file with no open references fails
+-	- files can be truncated up and down in length
+-	- three-way rename
+-	- operations for inserting and traversing buffers in a cache tree
+-	- allocating and freeing I/O channels
+-
+-# Unit tests (synchronous API)
+-
+-- Tests BlobFS w/ Blobstore with no dependencies on SPDK bdev layer or event framework.
+-  The synchronous API requires a separate thread to handle any asynchronous handoffs such as
+-  I/O to disk.
+-	- basic read/write I/O operations
+-	- appending to a file whose cache has been flushed and evicted
+-
+-# RocksDB
+-
+-- Tests BlobFS as the backing store for a RocksDB database.  BlobFS uses the SPDK NVMe driver
+-  through the SPDK bdev layer as its block device.  Uses RocksDB db_bench utility to drive
+-  the workloads.  Each workload (after the initial sequential insert) reloads the database
+-  which validates metadata operations completed correctly in the previous run via the
+-  RocksDB MANIFEST file.  RocksDB also runs checksums on key/value blocks read from disk,
+-  verifying data integrity.
+-	- initialize BlobFS filesystem on NVMe SSD
+-	- bulk sequential insert of up to 500M keys (16B key, 1000B value)
+-	- overwrite test - randomly overwrite one of the keys in the database (driving both
+-	  flush and compaction traffic)
+-	- readwrite test - one thread randomly overwrites a key in the database, up to 16
+-	  threads randomly read a key in the database.
+-	- writesync - same as overwrite, but enables a WAL (write-ahead log)
+-	- randread - up to 16 threads randomly read a key in the database
+-
+-## Future tests to add
+-
+-# Unit tests
+-
+-- Corrupt data in DRAM buffer, and confirm subsequent operations such as BlobFS load or
+-  opening a blob fail as expected (no panics, etc.)
+-- Test synchronous API with multiple synchronous threads.  May be implemented separately
+-  from existing synchronous unit tests to allow for more sophisticated thread
+-  synchronization.
+-- Add tests for out of capacity (no more space on disk for additional blobs/files)
+-- Pending addition of BlobFS superblob, verify that BlobFS load fails with missing or
+-  corrupt superblob
+-- Additional tests to reach 100% unit test coverage
+-
+-# System/integration tests
+-
+-- Use fio with BlobFS fuse module for more focused data integrity testing on individual
+-  files.
+-- Pending directory support (via an SPDK btree module), use BlobFS fuse module to do
+-  things like a Linux kernel compilation.  Performance may be poor but this will heavily
+-  stress the mechanics of BlobFS.
+-- Run RocksDB tests with varying amounts of BlobFS cache
+diff --git a/test/iscsi_tgt/test_plan.md b/test/iscsi_tgt/test_plan.md
+deleted file mode 100644
+index 4afad16..0000000
+--- a/test/iscsi_tgt/test_plan.md
++++ /dev/null
+@@ -1,41 +0,0 @@
+-# SPDK iscsi_tgt test plan
+-
+-## Objective
+-The purpose of these tests is to verify correct behavior of SPDK iSCSI target
+-feature.
+-These tests are run either per-commit or as nightly tests.
+-
+-## Configuration
+-All tests share the same basic configuration file for SPDK iscsi_tgt to run.
+-Static configuration from config file consists of setting number of per session
+-queues and enabling RPC for further configuration via RPC calls.
+-RPC calls used for dynamic configuration consist:
+-- creating Malloc backend devices
+-- creating Null Block backend devices
+-- creating Pmem backend devices
+-- constructing iSCSI subsystems
+-- deleting iSCSI subsystems
+-
+-### Tests
+-
+-#### Test 1: iSCSI  namespace on a Pmem device
+-This test configures a SPDK iSCSI subsystem backed by pmem
+-devices and uses FIO to generate I/Os that target those subsystems.
+-Test steps:
+-- Step 1: Start SPDK iscsi_tgt application.
+-- Step 2: Create 10 pmem pools.
+-- Step 3: Create pmem bdevs on pmem pools.
+-- Step 4: Create iSCSI subsystems with 10 pmem bdevs namespaces.
+-- Step 5: Connect to iSCSI susbsystems with kernel initiator.
+-- Step 6: Run FIO with workload parameters: blocksize=4096, iodepth=64,
+-	workload=randwrite; varify flag is enabled so that
+-	FIO reads and verifies the data written to the pmem device.
+-	The run time is 10 seconds for a quick test an 10 minutes
+-	for longer nightly test.
+-- Step 7: Run FIO with workload parameters: blocksize=128kB, iodepth=4,
+-	workload=randwrite; varify flag is enabled so that
+-	FIO reads and verifies the data written to the pmem device.
+-	The run time is 10 seconds for a quick test an 10 minutes
+-	for longer nightly test.
+-- Step 8: Disconnect kernel initiator from iSCSI subsystems.
+-- Step 9: Delete iSCSI subsystems from configuration.
+diff --git a/test/nvmf/test_plan.md b/test/nvmf/test_plan.md
+deleted file mode 100644
+index 94347ef..0000000
+--- a/test/nvmf/test_plan.md
++++ /dev/null
+@@ -1,95 +0,0 @@
+-# SPDK nvmf_tgt test plan
+-
+-## Objective
+-The purpose of these tests is to verify correct behavior of SPDK NVMe-oF
+-feature.
+-These tests are run either per-commit or as nightly tests.
+-
+-## Configuration
+-All tests share the same basic configuration file for SPDK nvmf_tgt to run.
+-Static configuration from config file consists of setting number of per session
+-queues and enabling RPC for further configuration via RPC calls.
+-RPC calls used for dynamic configuration consist:
+-- creating Malloc backend devices
+-- creating Null Block backend devices
+-- constructing NVMe-oF subsystems
+-- deleting NVMe-oF subsystems
+-
+-### Tests
+-
+-#### Test 1: NVMe-oF namespace on a Logical Volumes device
+-This test configures a SPDK NVMe-oF subsystem backed by logical volume
+-devices and uses FIO to generate I/Os that target those subsystems.
+-The logical volume bdevs are backed by malloc bdevs.
+-Test steps:
+-- Step 1: Assign IP addresses to RDMA NICs.
+-- Step 2: Start SPDK nvmf_tgt application.
+-- Step 3: Create malloc bdevs.
+-- Step 4: Create logical volume stores on malloc bdevs.
+-- Step 5: Create 10 logical volume bdevs on each logical volume store.
+-- Step 6: Create NVMe-oF subsystems with logical volume bdev namespaces.
+-- Step 7: Connect to NVMe-oF susbsystems with kernel initiator.
+-- Step 8: Run FIO with workload parameters: blocksize=256k, iodepth=64,
+-workload=randwrite; varify flag is enabled so that FIO reads and verifies
+-the data written to the logical device. The run time is 10 seconds for a
+-quick test an 10 minutes for longer nightly test.
+-- Step 9: Disconnect kernel initiator from NVMe-oF subsystems.
+-- Step 10: Delete NVMe-oF subsystems from configuration.
+-
+-### Compatibility testing
+-
+-- Verify functionality of SPDK `nvmf_tgt` with Linux kernel NVMe-oF host
+-  - Exercise various kernel NVMe host parameters
+-    - `nr_io_queues`
+-    - `queue_size`
+-  - Test discovery subsystem with `nvme` CLI tool
+-    - Verify that discovery service works correctly with `nvme discover`
+-    - Verify that large responses work (many subsystems)
+-
+-### Specification compliance
+-
+-- NVMe base spec compliance
+-  - Verify all mandatory admin commands are implemented
+-    - Get Log Page
+-    - Identify (including all mandatory CNS values)
+-      - Identify Namespace
+-      - Identify Controller
+-      - Active Namespace List
+-      - Allocated Namespace List
+-      - Identify Allocated Namespace
+-      - Attached Controller List
+-      - Controller List
+-    - Abort
+-    - Set Features
+-    - Get Features
+-    - Asynchronous Event Request
+-    - Keep Alive
+-  - Verify all mandatory NVM command set I/O commands are implemented
+-    - Flush
+-    - Write
+-    - Read
+-  - Verify all mandatory log pages
+-    - Error Information
+-    - SMART / Health Information
+-    - Firmware Slot Information
+-  - Verify all mandatory Get/Set Features
+-    - Arbitration
+-    - Power Management
+-    - Temperature Threshold
+-    - Error Recovery
+-    - Number of Queues
+-    - Write Atomicity Normal
+-    - Asynchronous Event Configuration
+-  - Verify all implemented commands behave as required by the specification
+-- Fabric command processing
+-  - Verify that Connect commands with invalid parameters are failed with correct response
+-    - Invalid RECFMT
+-    - Invalid SQSIZE
+-    - Invalid SUBNQN, HOSTNQN (too long, incorrect format, not null terminated)
+-    - QID != 0 before admin queue created
+-    - CNTLID != 0xFFFF (static controller mode)
+-  - Verify that non-Fabric commands are only allowed in the correct states
+-
+-### Configuration and RPC
+-
+-- Verify that invalid NQNs cannot be configured via conf file or RPC
+diff --git a/test/pmem/test_plan.md b/test/pmem/test_plan.md
+deleted file mode 100644
+index 730b992..0000000
+--- a/test/pmem/test_plan.md
++++ /dev/null
+@@ -1,310 +0,0 @@
+-# PMEM bdev feature test plan
+-
+-## Objective
+-The purpose of these tests is to verify possibility of using pmem bdev
+-configuration in SPDK by running functional tests FIO traffic verification
+-tests.
+-
+-## Configuration
+-Configuration in tests is to be done using example stub application
+-(spdk/example/bdev/io/bdev_io).
+-All possible management is done using RPC calls with the exception of
+-use of split bdevs which have to be configured in .conf file.
+-
+-Functional tests are executed as scenarios - sets of smaller test steps
+-in which results and return codes of RPC calls are validated.
+-Some configuration calls may also additionally be validated
+-by use of "get" (e.g. get_bdevs) RPC calls, which provide additional
+-information for veryfing results.
+-In some steps additional write/read operations will be performed on
+-PMEM bdevs in order to check IO path correct behavior.
+-
+-FIO traffic verification tests will serve as integration tests and will
+-be executed to config correct behavior of PMEM bdev when working with vhost,
+-nvmf_tgt and iscsi_tgt applications.
+-
+-## Functional tests
+-
+-### bdev_pmem_get_pool_info
+-
+-#### bdev_pmem_get_pool_info_tc1
+-Negative test for checking pmem pool file.
+-Call with missing path argument.
+-Steps & expected results:
+-- Call bdev_pmem_get_pool_info with missing path argument
+-- Check that return code != 0 and error code =
+-
+-#### bdev_pmem_get_pool_info_tc2
+-Negative test for checking pmem pool file.
+-Call with non-existant path argument.
+-Steps & expected results:
+-- Call bdev_pmem_get_pool_info with path argument that points to not existing file.
+-- Check that return code != 0 and error code = ENODEV
+-
+-#### bdev_pmem_get_pool_info_tc3
+-Negative test for checking pmem pool file.
+-Call with other type of pmem pool file.
+-Steps & expected results:
+-- Using pmem utility tools create pool of OBJ type instead of BLK
+-(if needed utility tools are not available - create random file in filesystem)
+-- Call bdev_pmem_get_pool_info and point to file created in previous step.
+-- Check that return code != 0 and error code = ENODEV
+-
+-#### bdev_pmem_get_pool_info_tc4
+-Positive test for checking pmem pool file.
+-Call with existing pmem pool file.
+-Steps & expected results:
+-- Call bdev_pmem_get_pool_info with path argument that points to existing file.
+-- Check that return code == 0
+-
+-### bdev_pmem_create_pool
+-From libpmemblk documentation:
+-- PMEM block size has to be bigger than 512 internal blocks; if lower value
+-is used then PMEM library will silently round it up to 512 which is defined
+-in pmem/libpmemblk.h file as PMEMBLK_MIN_BLK.
+-- Total pool size cannot be less than 16MB which is defined i
+-pmem/libpmemblk.h file as PMEMBLK_MIN_POOL
+-- Total number of segments in PMEP pool file cannot be less than 256
+-
+-#### bdev_pmem_create_pool_tc1
+-Negative test case for creating a new pmem.
+-Call bdev_pmem_create_pool with missing arguments.
+-Steps & expected results:
+-- call bdev_pmem_create_pool without path argument
+-- call return code != 0
+-- call bdev_pmem_get_pool_info and check that pmem pool file was not created
+-- call return code != 0
+-- call bdev_pmem_create_pool with path but without size and block size arguments
+-- call return code != 0
+-- call bdev_pmem_get_pool_info and check that pmem pool file was not created
+-- call return code != 0
+-- call bdev_pmem_create_pool with path and size but without block size arguments
+-- call return code != 0
+-- call bdev_pmem_get_pool_info and check that pmem pool file was not created
+-- call return code != 0
+-
+-#### bdev_pmem_create_pool_tc2
+-Negative test case for creating a new pmem.
+-Call bdev_pmem_create_pool with non existing path argument.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with path that does not exist
+-- call return code != 0
+-- call bdev_pmem_get_pool_info and check that pmem pool file was not created
+-- call return code != 0
+-
+-#### bdev_pmem_create_pool_tc3
+-Positive test case for creating a new pmem pool on disk space.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument,
+-blocksize=512 and total size=256MB
+-- call return code = 0
+-- call bdev_pmem_get_pool_info and check that pmem file was created
+-- call return code = 0
+-- call bdev_pmem_delete_pool on previously created pmem
+-- return code = 0 and no error code
+-
+-#### bdev_pmem_create_pool_tc4
+-Positive test case for creating a new pmem pool in RAM space.
+-# TODO: Research test steps for creating a pool in RAM!!!
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument,
+-blocksize=512 and total size=256MB
+-- call return code = 0
+-- call bdev_pmem_get_pool_info and check that pmem file was created
+-- call return code = 0
+-- call bdev_pmem_delete_pool on previously created pmem
+-- return code = 0 and no error code
+-
+-#### bdev_pmem_create_pool_tc5
+-Negative test case for creating two pmems with same path.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument,
+-blocksize=512 and total size=256MB
+-- call return code = 0
+-- call bdev_pmem_get_pool_info and check that pmem file was created
+-- call return code = 0
+-- call bdev_pmem_create_pool with the same path argument as before,
+-blocksize=4096 and total size=512MB
+-- call return code != 0, error code = EEXIST
+-- call bdev_pmem_create_pool and check that first pmem pool file is still
+-available and not modified (block size and total size stay the same)
+-- call return code = 0
+-- call bdev_pmem_delete_pool on first created pmem pool
+-- return code =0 and no error code
+-
+-#### bdev_pmem_create_pool_tc6
+-Positive test case for creating pmem pool file with various block sizes.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument, total size=256MB
+-with different block size arguments - 1, 511, 512, 513, 1024, 4096, 128k and 256k
+-- call bdev_pmem_get_pool_info on each of created pmem pool and check if it was created;
+-For pool files created with block size <512 their block size should be rounded up
+-to 512; other pool files should have the same block size as specified in create
+-command
+-- call return code = 0; block sizes as expected
+-- call bdev_pmem_delete_pool on all created pool files
+-
+-#### bdev_pmem_create_pool_tc7
+-Negative test case for creating pmem pool file with total size of less than 16MB.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument, block size=512 and
+-total size less than 16MB
+-- return code !=0 and error code !=0
+-- call bdev_pmem_get_pool_info to verify pmem pool file was not created
+-- return code = 0
+-
+-#### bdev_pmem_create_pool_tc8
+-Negative test case for creating pmem pool file with less than 256 blocks.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument, block size=128k and
+-total size=30MB
+-- return code !=0 and error code !=0
+-- call bdev_pmem_get_pool_info to verify pmem pool file was not created
+-- return code = 0
+-
+-### bdev_pmem_delete_pool
+-
+-#### bdev_pmem_delete_pool_tc1
+-Negative test case for deleting a pmem.
+-Call bdev_pmem_delete_pool on non-exisiting pmem.
+-Steps & expected results:
+-- call bdev_pmem_delete_pool on non-existing pmem.
+-- return code !=0 and error code = ENOENT
+-
+-#### bdev_pmem_delete_pool_tc2
+-Negative test case for deleting a pmem.
+-Call bdev_pmem_delete_pool on a file of wrong type
+-Steps & expected results:
+-- Using pmem utility tools create pool of OBJ type instead of BLK
+-(if needed utility tools are not available - create random file in filesystem)
+-- Call bdev_pmem_delete_pool and point to file created in previous step.
+-- return code !=0 and error code = ENOTBLK
+-
+-#### bdev_pmem_delete_pool_tc3
+-Positive test case for creating and deleting a pemem.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct arguments
+-- return code = 0 and no error code
+-- using bdev_pmem_get_pool_info check that pmem was created
+-- return code = 0 and no error code
+-- call bdev_pmem_delete_pool on previously created pmem
+-- return code = 0 and no error code
+-- using bdev_pmem_get_pool_info check that pmem no longer exists
+-- return code !=0 and error code = ENODEV
+-
+-#### bdev_pmem_delete_pool_tc4
+-Negative test case for creating and deleting a pemem.
+-Steps & expected results:
+-- run scenario from test case 3
+-- call bdev_pmem_delete_pool on already deleted pmem pool
+-- return code !=0 and error code = ENODEV
+-
+-### bdev_pmem_create
+-
+-#### bdev_pmem_create_tc1
+-Negative test for constructing new pmem bdev.
+-Call bdev_pmem_create with missing argument.
+-Steps & expected results:
+-- Call bdev_pmem_create with missing path argument.
+-- Check that return code != 0
+-
+-#### bdev_pmem_create_tc2
+-Negative test for constructing new pmem bdev.
+-Call bdev_pmem_create with not existing path argument.
+-Steps & expected results:
+-- call bdev_pmem_create with incorrect (not existing) path
+-- call return code != 0 and error code = ENODEV
+-- using get_bdevs check that no pmem bdev was created
+-
+-#### bdev_pmem_create_tc3
+-Negative test for constructing pmem bdevs with random file instead of pmemblk pool.
+-Steps & expected results:
+-- using a system tool (like dd) create a random file
+-- call bdev_pmem_create with path pointing to that file
+-- return code != 0, error code = ENOTBLK
+-
+-#### bdev_pmem_create_tc4
+-Negative test for constructing pmem bdevs with pmemobj instead of pmemblk pool.
+-Steps & expected results:
+-- Using pmem utility tools create pool of OBJ type instead of BLK
+-(if needed utility tools are not available - create random file in filesystem)
+-- call bdev_pmem_create with path pointing to that pool
+-- return code != 0, error code = ENOTBLK
+-
+-#### bdev_pmem_create_tc5
+-Positive test for constructing pmem bdev.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct arguments
+-- return code = 0, no errors
+-- call bdev_pmem_get_pool_info and check if pmem files exists
+-- return code = 0, no errors
+-- call bdev_pmem_create with with correct arguments to create a pmem bdev
+-- return code = 0, no errors
+-- using get_bdevs check that pmem bdev was created
+-- delete pmem bdev using bdev_pmem_delete
+-- return code = 0, no error code
+-- delete previously created pmem pool
+-- return code = 0, no error code
+-
+-#### bdev_pmem_create_tc6
+-Negative test for constructing pmem bdevs twice on the same pmem.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct arguments
+-- return code = 0, no errors
+-- call bdev_pmem_get_pool_info and check if pmem files exists
+-- return code = 0, no errors
+-- call bdev_pmem_create with with correct arguments to create a pmem bdev
+-- return code = 0, no errors
+-- using get_bdevs check that pmem bdev was created
+-- call bdev_pmem_create again on the same pmem file
+-- return code != 0, error code = EEXIST
+-- delete pmem bdev using bdev_pmem_delete
+-- return code = 0, no error code
+-- delete previously created pmem pool
+-- return code = 0, no error code
+-
+-### bdev_pmem_delete
+-
+-#### delete_bdev_tc1
+-Positive test for deleting pmem bdevs using bdev_pmem_delete call.
+-Steps & expected results:
+-- construct malloc and aio bdevs (also NVMe if possible)
+-- all calls - return code = 0, no errors; bdevs created
+-- call bdev_pmem_create_pool with correct path argument,
+-block size=512, total size=256M
+-- return code = 0, no errors
+-- call bdev_pmem_get_pool_info and check if pmem file exists
+-- return code = 0, no errors
+-- call bdev_pmem_create and create a pmem bdev
+-- return code = 0, no errors
+-- using get_bdevs check that pmem bdev was created
+-- delete pmem bdev using bdev_pmem_delete
+-- return code = 0, no errors
+-- using get_bdevs confirm that pmem bdev was deleted and other bdevs
+-were unaffected.
+-
+-#### bdev_pmem_delete_tc2
+-Negative test for deleting pmem bdev twice.
+-Steps & expected results:
+-- call bdev_pmem_create_pool with correct path argument,
+-block size=512, total size=256M
+-- return code = 0, no errors
+-- call bdev_pmem_get_pool_info and check if pmem file exists
+-- return code = 0, no errors
+-- call bdev_pmem_create and create a pmem bdev
+-- return code = 0, no errors
+-- using get_bdevs check that pmem bdev was created
+-- delete pmem bdev using bdev_pmem_delete
+-- return code = 0, no errors
+-- using get_bdevs confirm that pmem bdev was deleted
+-- delete pmem bdev using bdev_pmem_delete second time
+-- return code != 0, error code = ENODEV
+-
+-
+-## Integration tests
+-Description of integration tests which run FIO verification traffic against
+-pmem_bdevs used in vhost, iscsi_tgt and nvmf_tgt applications can be found in
+-test directories for these components:
+-- spdk/test/vhost
+-- spdk/test/nvmf
+-- spdk/test/iscsi_tgt
+diff --git a/test/vhost/hotplug/test_plan.md b/test/vhost/hotplug/test_plan.md
+deleted file mode 100644
+index 0cbc504..0000000
+--- a/test/vhost/hotplug/test_plan.md
++++ /dev/null
+@@ -1,86 +0,0 @@
+-#Vhost hotattach and hotdetach test plan
+-
+-## Objective
+-The purpose of these tests is to verify that SPDK vhost remains stable during
+-hot-attach and hot-detach operations performed on SCSI controllers devices.
+-Hot-attach is a scenario where a device is added to controller already in use by
+-guest VM, while in hot-detach device is removed from controller when already in use.
+-
+-## Test Cases Description
+-1. FIO I/O traffic is run during hot-attach and detach operations.
+-By default FIO uses default_integrity*.job config files located in
+-test/vhost/hotfeatures/fio_jobs directory.
+-2. FIO mode of operation in random write (randwrite) with verification enabled
+-which results in also performing read operations.
+-3. Test case descriptions below contain manual steps for testing.
+-Automated tests are located in test/vhost/hotfeatures.
+-
+-### Hotattach, Hotdetach Test Cases prerequisites
+-1. Run vhost with 8 empty controllers. Prepare 16 nvme disks.
+-If you don't have 16 disks use split.
+-2. In test cases fio status is checked after every run if there are any errors.
+-
+-### Hotattach Test Cases prerequisites
+-1. Run vms, first with ctrlr-1 and ctrlr-2 and second one with ctrlr-3 and ctrlr-4.
+-
+-## Test Case 1
+-1. Attach NVMe to Ctrlr 1
+-2. Run fio integrity on attached device
+-
+-## Test Case 2
+-1. Run fio integrity on attached device from test case 1
+-2. During fio attach another NVMe to Ctrlr 1
+-3. Run fio integrity on both devices
+-
+-## Test Case 3
+-1. Run fio integrity on attached devices from previous test cases
+-2. During fio attach NVMe to Ctrl2
+-3. Run fio integrity on all devices
+-
+-## Test Case 4
+-2. Run fio integrity on attached device from previous test cases
+-3. During fio attach NVMe to Ctrl3/VM2
+-4. Run fio integrity on all devices
+-5. Reboot VMs
+-6. Run fio integrity again on all devices
+-
+-
+-### Hotdetach Test Cases prerequisites
+-1. Run vms, first with ctrlr-5 and ctrlr-6 and second with ctrlr-7 and ctrlr-8.
+-
+-## Test Case 1
+-1. Run fio on all devices
+-2. Detatch NVMe from Ctrl5 during fio
+-3. Check vhost or VMs did not crash
+-4. Check that detatched device is gone from VM
+-5. Check that fio job run on detached device stopped and failed
+-
+-## Test Case 2
+-1. Attach NVMe to Ctrlr 5
+-2. Run fio on 1 device from Ctrl 5
+-3. Detatch NVMe from Ctrl5 during fio traffic
+-4. Check vhost or VMs did not crash
+-5. Check that fio job run on detached device stopped and failed
+-6. Check that detatched device is gone from VM
+-
+-## Test Case 3
+-1. Attach NVMe to Ctrlr 5
+-2. Run fio with integrity on all devices, except one
+-3. Detatch NVMe without traffic during fio running on other devices
+-4. Check vhost or VMs did not crash
+-5. Check that fio jobs did not fail
+-6. Check that detatched device is gone from VM
+-
+-## Test Case 4
+-1. Attach NVMe to Ctrlr 5
+-2. Run fio on 1 device from Ctrl 5
+-3. Run separate fio with integrity on all other devices (all VMs)
+-4. Detatch NVMe from Ctrl1 during fio traffic
+-5. Check vhost or VMs did not crash
+-6. Check that fio job run on detached device stopped and failed
+-7. Check that other fio jobs did not fail
+-8. Check that detatched device is gone from VM
+-9. Reboot VMs
+-10. Check that detatched device is gone from VM
+-11. Check that all other devices are in place
+-12. Run fio integrity on all remianing devices
+diff --git a/test/vhost/readonly/test_plan.md b/test/vhost/readonly/test_plan.md
+deleted file mode 100644
+index 957000e..0000000
+--- a/test/vhost/readonly/test_plan.md
++++ /dev/null
+@@ -1,30 +0,0 @@
+-# vhost-block readonly feature test plan
+-
+-## Objective
+-Vhost block controllers can be created with readonly feature which prevents any write operations on this device.
+-The purpose of this test is to verify proper operation of this feature.
+-
+-## Test cases description
+-To test readonly feature, this test will create normal vhost-blk controller with NVMe device and on a VM it will
+-create and mount a partition to which it will copy a file. Next it will poweroff a VM, remove vhost controller and
+-create new readonly vhost-blk controller with the same device.
+-
+-## Test cases
+-
+-### blk_ro_tc1
+-1. Start vhost
+-2. Create vhost-blk controller with NVMe device and readonly feature disabled using RPC
+-3. Run VM with attached vhost-blk controller
+-4. Check visibility of readonly flag using lsblk, fdisk
+-5. Create new partition
+-6. Create new file on new partition
+-7. Shutdown VM, remove vhost controller
+-8. Create vhost-blk with previously used NVMe device and readonly feature now enabled using RPC
+-9. Run VM with attached vhost-blk controller
+-10. Check visibility of readonly flag using lsblk, fdisk
+-11. Try to delete previous file
+-12. Try to create new file
+-13. Try to remove partition
+-14. Repeat steps 2 to 4
+-15. Remove file from disk, delete partition
+-16. Shutdown VM, exit vhost
+diff --git a/test/vhost/test_plan.md b/test/vhost/test_plan.md
+deleted file mode 100644
+index b412436..0000000
+--- a/test/vhost/test_plan.md
++++ /dev/null
+@@ -1,252 +0,0 @@
+-# SPDK vhost Test Plan
+-
+-## Current Tests
+-
+-### Integrity tests
+-
+-#### vhost self test
+-- compiles SPDK and Qemu
+-- launches SPDK Vhost
+-- starts VM with 1 NVMe device attached to it
+-- issues controller "reset" command using sg3_utils on guest system
+-- performs data integrity check using dd to write and read data from the device
+-- runs on 3 host systems (Ubuntu 16.04, Centos 7.3 and Fedora 25)
+-  and 1 guest system (Ubuntu 16.04)
+-- runs against vhost scsi and vhost blk
+-
+-#### FIO Integrity tests
+-- NVMe device is split into 4 LUNs, each is attached to separate vhost controller
+-- FIO uses job configuration with randwrite mode to verify if random pattern was
+-  written to and read from correctly on each LUN
+-- runs on Fedora 25 and Ubuntu 16.04 guest systems
+-- runs against vhost scsi and vhost blk
+-
+-#### Lvol tests
+-- starts vhost with at least 1 NVMe device
+-- starts 1 VM or multiple VMs
+-- lvol store is constructed on each NVMe device
+-- on each lvol store 1 lvol bdev will be constructed for each running VM
+-- Logical volume block device is used as backend instead of using
+-  NVMe device backend directly
+-- after set up, data integrity check will be performed by FIO randwrite
+-  operation with verify flag enabled
+-- optionally nested lvols can be tested with use of appropriate flag;
+-  On each base lvol store additional lvol bdev will be created which will
+-  serve as a base for nested lvol stores.
+-  On each of the nested lvol stores there will be 1 lvol bdev created for each
+-  VM running. Nested lvol bdevs will be used along with base lvol bdevs for
+-  data integrity check.
+-- runs against vhost scsi and vhost blk
+-
+-#### Filesystem integrity
+-- runs SPDK with 1 VM with 1 NVMe device attached.
+-- creates a partition table and filesystem on passed device, and mounts it
+-- 1GB test file is created on mounted file system and FIO randrw traffic
+-  (with enabled verification) is run
+-- Tested file systems: ext4, brtfs, ntfs, xfs
+-- runs against vhost scsi and vhost blk
+-
+-#### Windows HCK SCSI Compliance Test 2.0.
+-- Runs SPDK with 1 VM with Windows Server 2012 R2 operating system
+-- 4 devices are passed into the VM: NVMe, Split NVMe, Malloc and Split Malloc
+-- On each device Windows HCK SCSI Compliance Test 2.0 is run
+-
+-#### MultiOS test
+-- start 3 VMs with guest systems: Ubuntu 16.04, Fedora 25 and Windows Server 2012 R2
+-- 3 physical NVMe devices are split into 9 LUNs
+-- each guest uses 3 LUNs from 3 different physical NVMe devices
+-- Linux guests run FIO integrity jobs to verify read/write operations,
+-    while Windows HCK SCSI Compliance Test 2.0 is running on Windows guest
+-
+-#### vhost hot-remove tests
+-- removing NVMe device (unbind from driver) which is already claimed
+-    by controller in vhost
+-- hotremove tests performed with and without I/O traffic to device
+-- I/O traffic, if present in test, has verification enabled
+-- checks that vhost and/or VMs do not crash
+-- checks that other devices are unaffected by hot-remove of a NVMe device
+-- performed against vhost blk and vhost scsi
+-
+-#### vhost scsi hot-attach and hot-detach tests
+-- adding and removing devices via RPC to a controller which is already in use by a VM
+-- I/O traffic generated with FIO read/write operations, verification enabled
+-- checks that vhost and/or VMs do not crash
+-- checks that other devices in the same controller are unaffected by hot-attach
+-    and hot-detach operations
+-
+-#### virtio initiator tests
+-- virtio user mode: connect to vhost-scsi controller sockets directly on host
+-- virtio pci mode: connect to virtual pci devices on guest virtual machine
+-- 6 concurrent jobs are run simultaneously on 7 devices, each with 8 virtqueues
+-
+-##### kernel virtio-scsi-pci device
+-- test support for kernel vhost-scsi device
+-- create 1GB ramdisk using targetcli
+-- create target and add ramdisk to it using targetcli
+-- add created device to virtio pci tests
+-
+-##### emulated virtio-scsi-pci device
+-- test support for QEMU emulated virtio-scsi-pci device
+-- add emulated virtio device "Virtio0" to virtio pci tests
+-
+-##### Test configuration
+-- SPDK vhost application is used for testing
+-- FIO using spdk fio_plugin: rw, randrw, randwrite, write with verification enabled.
+-- trim sequential and trim random then write on trimmed areas with verification enabled
+-    only on unmap supporting devices
+-- FIO job configuration: iodepth=128, block size=4k, runtime=10s
+-- all test cases run jobs in parallel on multiple bdevs
+-- 8 queues per device
+-
+-##### vhost configuration
+-- scsi controller with 4 NVMe splits
+-- 2 block controllers, each with 1 NVMe split
+-- scsi controller with malloc with 512 block size
+-- scsi controller with malloc with 4096 block size
+-
+-##### Test case 1
+-- virtio user on host
+-- perform FIO rw, randwrite, randrw, write, parallel jobs on all devices
+-
+-##### Test case 2
+-- virtio user on host
+-- perform FIO trim, randtrim, rw, randwrite, randrw, write, - parallel jobs
+-    then write on trimmed areas on unmap supporting devices
+-
+-##### Test case 3
+-- virtio pci on vm
+-- same config as in TC#1
+-
+-##### Test case 4
+-- virtio pci on vm
+-- same config as in TC#2
+-
+-### Live migration
+-Live migration feature allows to move running virtual machines between SPDK vhost
+-instances.
+-Following tests include scenarios with SPDK vhost instances running on both the same
+-physical server and between remote servers.
+-Additional configuration of utilities like SSHFS share, NIC IP address adjustment,
+-etc., might be necessary.
+-
+-#### Test case 1 - single vhost migration
+-- Start SPDK Vhost application.
+-    - Construct a single Malloc bdev.
+-    - Construct two SCSI controllers and add previously created Malloc bdev to it.
+-- Start first VM (VM_1) and connect to Vhost_1 controller.
+-  Verify if attached disk is visible in the system.
+-- Start second VM (VM_2) but with "-incoming" option enabled, connect to.
+-  Connect to Vhost_2 controller. Use the same VM image as VM_1.
+-- On VM_1 start FIO write job with verification enabled to connected Malloc bdev.
+-- Start VM migration from VM_1 to VM_2 while FIO is still running on VM_1.
+-- Once migration is complete check the result using Qemu monitor. Migration info
+-  on VM_1 should return "Migration status: completed".
+-- VM_2 should be up and running after migration. Via SSH log in and check FIO
+-  job result - exit code should be 0 and there should be no data verification errors.
+-- Cleanup:
+-    - Shutdown both VMs.
+-    - Gracefully shutdown Vhost instance.
+-
+-#### Test case 2 - single server migration
+-- Detect RDMA NICs; At least 1 RDMA NIC is needed to run the test.
+-  If there is no physical NIC available then emulated Soft Roce NIC will
+-  be used instead.
+-- Create /tmp/share directory and put a test VM image in there.
+-- Start SPDK NVMeOF Target application.
+-    - Construct a single NVMe bdev from available bound NVMe drives.
+-    - Create NVMeoF subsystem with NVMe bdev as single namespace.
+-- Start first SDPK Vhost application instance (later referred to as "Vhost_1").
+-    - Use different shared memory ID and CPU mask than NVMeOF Target.
+-    - Construct a NVMe bdev by connecting to NVMeOF Target
+-        (using trtype: rdma).
+-    - Construct a single SCSI controller and add NVMe bdev to it.
+-- Start first VM (VM_1) and connect to Vhost_1 controller. Verify if attached disk
+-  is visible in the system.
+-- Start second SDPK Vhost application instance (later referred to as "Vhost_2").
+-    - Use different shared memory ID and CPU mask than previous SPDK instances.
+-    - Construct a NVMe bdev by connecting to NVMeOF Target. Connect to the same
+-      subsystem as Vhost_1, multiconnection is allowed.
+-    - Construct a single SCSI controller and add NVMe bdev to it.
+-- Start second VM (VM_2) but with "-incoming" option enabled.
+-- Check states of both VMs using Qemu monitor utility.
+-  VM_1 should be in running state.
+-  VM_2 should be in paused (inmigrate) state.
+-- Run FIO I/O traffic with verification enabled on to attached NVME on VM_1.
+-- While FIO is running issue a command for VM_1 to migrate.
+-- When the migrate call returns check the states of VMs again.
+-  VM_1 should be in paused (postmigrate) state. "info migrate" should report
+-  "Migration status: completed".
+-  VM_2 should be in running state.
+-- Verify that FIO task completed successfully on VM_2 after migrating.
+-  There should be no I/O failures, no verification failures, etc.
+-- Cleanup:
+-    - Shutdown both VMs.
+-    - Gracefully shutdown Vhost instances and NVMEoF Target instance.
+-    - Remove /tmp/share directory and it's contents.
+-    - Clean RDMA NIC / Soft RoCE configuration.
+-
+-#### Test case 3 - remote server migration
+-- Detect RDMA NICs on physical hosts. At least 1 RDMA NIC per host is needed
+-  to run the test.
+-- On Host 1 create /tmp/share directory and put a test VM image in there.
+-- On Host 2 create /tmp/share directory. Using SSHFS mount /tmp/share from Host 1
+-  so that the same VM image can be used on both hosts.
+-- Start SPDK NVMeOF Target application on Host 1.
+-    - Construct a single NVMe bdev from available bound NVMe drives.
+-    - Create NVMeoF subsystem with NVMe bdev as single namespace.
+-- Start first SDPK Vhost application instance on Host 1(later referred to as "Vhost_1").
+-    - Use different shared memory ID and CPU mask than NVMeOF Target.
+-    - Construct a NVMe bdev by connecting to NVMeOF Target
+-        (using trtype: rdma).
+-    - Construct a single SCSI controller and add NVMe bdev to it.
+-- Start first VM (VM_1) and connect to Vhost_1 controller. Verify if attached disk
+-  is visible in the system.
+-- Start second SDPK Vhost application instance on Host 2(later referred to as "Vhost_2").
+-    - Construct a NVMe bdev by connecting to NVMeOF Target. Connect to the same
+-      subsystem as Vhost_1, multiconnection is allowed.
+-    - Construct a single SCSI controller and add NVMe bdev to it.
+-- Start second VM (VM_2) but with "-incoming" option enabled.
+-- Check states of both VMs using Qemu monitor utility.
+-  VM_1 should be in running state.
+-  VM_2 should be in paused (inmigrate) state.
+-- Run FIO I/O traffic with verification enabled on to attached NVME on VM_1.
+-- While FIO is running issue a command for VM_1 to migrate.
+-- When the migrate call returns check the states of VMs again.
+-  VM_1 should be in paused (postmigrate) state. "info migrate" should report
+-  "Migration status: completed".
+-  VM_2 should be in running state.
+-- Verify that FIO task completed successfully on VM_2 after migrating.
+-  There should be no I/O failures, no verification failures, etc.
+-- Cleanup:
+-    - Shutdown both VMs.
+-    - Gracefully shutdown Vhost instances and NVMEoF Target instance.
+-    - Remove /tmp/share directory and it's contents.
+-    - Clean RDMA NIC configuration.
+-
+-### Performance tests
+-Tests verifying the performance and efficiency of the module.
+-
+-#### FIO Performance 6 NVMes
+-- SPDK and created controllers run on 2 CPU cores.
+-- Each NVMe drive is split into 2 Split NVMe bdevs, which gives a total of 12
+-  in test setup.
+-- 12 vhost controllers are created, one for each Split NVMe bdev. All controllers
+-  use the same CPU mask as used for running Vhost instance.
+-- 12 virtual machines are run as guest systems (with Ubuntu 16.04.2); Each VM
+-  connects to a single corresponding vhost controller.
+-  Per VM configuration is: 2 pass-through host CPU's, 1 GB RAM, 2 IO controller queues.
+-- NVMe drives are pre-conditioned before the test starts. Pre-conditioning is done by
+-  writing over whole disk sequentially at least 2 times.
+-- FIO configurations used for tests:
+-    - IO depths: 1, 8, 128
+-    - Blocksize: 4k
+-    - RW modes: read, randread, write, randwrite, rw, randrw
+-    - Write modes are additionally run with 15 minute ramp-up time to allow better
+-    measurements. Randwrite mode uses longer ramp-up preconditioning of 90 minutes per run.
+-- Each FIO job result is compared with baseline results to allow detecting performance drops.
+-
+-## Future tests and improvements
+-
+-### Stress tests
+-- Add stability and stress tests (long duration tests, long looped start/stop tests, etc.)
+-to test pool
+-- 
+2.7.4
+

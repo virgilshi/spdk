@@ -1283,13 +1283,20 @@ nvme_pcie_qpair_submit_tracker(struct spdk_nvme_qpair *qpair, struct nvme_tracke
 {
 	struct nvme_request	*req;
 	struct nvme_pcie_qpair	*pqpair = nvme_pcie_qpair(qpair);
-
+	uint64_t t_cdw11, t_cdw10;
+	uint32_t len;
+		
 	req = tr->req;
 	assert(req != NULL);
 
 	/* Copy the command from the tracker to the submission queue. */
 	nvme_pcie_copy_command(&pqpair->cmd[pqpair->sq_tail], &req->cmd);
 
+	t_cdw11 = req->cmd.cdw11;
+	t_cdw10 = req->cmd.cdw10;
+	len = (req->cmd.cdw12 & 0xFFFF) + 1;
+	SPDK_DAPULOG("nvme lba: %16llx, len: %u\n", (t_cdw11 << 32) | t_cdw11, len);
+	
 	if (spdk_unlikely(++pqpair->sq_tail == pqpair->num_entries)) {
 		pqpair->sq_tail = 0;
 	}
@@ -1311,6 +1318,8 @@ nvme_pcie_qpair_complete_tracker(struct spdk_nvme_qpair *qpair, struct nvme_trac
 	struct nvme_request		*req;
 	bool				retry, error;
 	bool				req_from_current_proc = true;
+	uint64_t 			t_cdw11, t_cdw10;
+	uint32_t 			len;
 
 	req = tr->req;
 
@@ -1360,6 +1369,11 @@ nvme_pcie_qpair_complete_tracker(struct spdk_nvme_qpair *qpair, struct nvme_trac
 			nvme_qpair_submit_request(qpair, req);
 		}
 	}
+	
+	t_cdw11 = req->cmd.cdw11;
+	t_cdw10 = req->cmd.cdw10;
+	len = (req->cmd.cdw12 & 0xFFFF) + 1;
+	SPDK_DAPULOG("nvme lba: %16llx, len: %u\n", (t_cdw11 << 32) | t_cdw11, len);
 }
 
 static void

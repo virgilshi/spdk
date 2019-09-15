@@ -248,6 +248,9 @@ ftl_reloc_write_cb(struct ftl_io *io, void *arg, int status)
 	size_t i;
 
 	breloc->num_outstanding--;
+	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->ppa.grp, move->ppa.pu, move->ppa.chk, move->ppa.lbk,
+		move->io->band->id,
+		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
 
 	if (status) {
 		SPDK_ERRLOG("Reloc write failed with status: %d\n", status);
@@ -271,6 +274,9 @@ ftl_reloc_read_cb(struct ftl_io *io, void *arg, int status)
 	struct ftl_band_reloc *breloc = move->breloc;
 
 	breloc->num_outstanding--;
+	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->ppa.grp, move->ppa.pu, move->ppa.chk, move->ppa.lbk,
+		move->io->band->id,
+		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
 
 	/* TODO: We should handle fail on relocation read. We need to inform */
 	/* user that this group of blocks is bad (update l2p with bad block address and */
@@ -469,6 +475,12 @@ ftl_reloc_write(struct ftl_band_reloc *breloc, struct ftl_reloc_move *move)
 	}
 
 	breloc->num_outstanding++;
+	
+//	SPDK_DAPULOG("***** lba = %20lx(%u), ppa = %20lx\n", move->io->lba.single, move->io->lbk_cnt, ftl_ppa_addr_pack(move->io->dev, move->io->ppa));
+	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->io->ppa.grp, move->io->ppa.pu, move->io->ppa.chk, move->io->ppa.lbk, 
+		move->io->band->id,
+		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
+
 	ftl_io_write(move->io);
 	return 0;
 }
@@ -499,6 +511,10 @@ ftl_reloc_read(struct ftl_band_reloc *breloc, struct ftl_reloc_move *move)
 	}
 
 	breloc->num_outstanding++;
+	//SPDK_DAPULOG("***** lba = %lx(%u), ppa = %lx\n", move->io->lba.single, move->io->lbk_cnt, ftl_ppa_addr_pack(move->io->dev, move->io->ppa));
+	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", ppa.grp, ppa.pu, ppa.chk, ppa.lbk, 
+		move->io->band->id,
+		ftl_ppa_addr_pack(breloc->band->dev, ppa));
 	ftl_io_read(move->io);
 	return 0;
 }
@@ -584,6 +600,13 @@ ftl_reloc_release(struct ftl_band_reloc *breloc)
 static void
 ftl_process_reloc(struct ftl_band_reloc *breloc)
 {
+#if 0
+	SPDK_DAPULOG("*** breloc(band(id: %03u, state: %u, merit: %.3lf, wr_cnt: %u, num_reloc_bands: %u, num_reloc_blocks: %u), "\
+		"num_lbks: %u, active: %d, defrag: %u, num_outstanding: %u)\n", 
+		breloc->band->id, breloc->band->state, breloc->band->merit, breloc->band->wr_cnt, breloc->band->num_reloc_bands,
+		breloc->band->num_reloc_blocks,
+		breloc->num_lbks, breloc->active, breloc->defrag, breloc->num_outstanding);
+#endif
 	ftl_reloc_process_moves(breloc);
 
 	if (ftl_reloc_done(breloc)) {

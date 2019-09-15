@@ -29,3 +29,4 @@ mk/cc.mk
 mk/config.mk
 mk/cc.flags.mk
 PYTHON_COMMAND
+507.si4project/*

@@ -709,7 +709,9 @@ ftl_read_md_cb(struct ftl_io *io, void *arg, int status)
 	} else {
 		status = FTL_MD_IO_FAILURE;
 	}
-
+	SPDK_DAPULOG("ppa: group(%llu), pu(%llu), chunk(%llu), block(%04llu), band(%03llu) - %llx\n", md_io->io.ppa.grp, md_io->io.ppa.pu, md_io->io.ppa.chk, md_io->io.ppa.lbk, 
+		md_io->io.band->id,
+		ftl_ppa_addr_pack(md_io->io.dev, md_io->io.ppa));
 	md_io->cb_fn(io, md_io->cb_ctx, status);
 }
 
@@ -831,7 +833,8 @@ ftl_band_read_md(struct ftl_band *band, size_t lbk_cnt, struct ftl_ppa start_ppa
 	if (!io) {
 		return -ENOMEM;
 	}
-
+	SPDK_DAPULOG("ppa: group(%u), pu(%u), chunk(%u), block(%u), band(%u) - %llx\n", io->io.ppa.grp, io->io.ppa.pu, io->io.ppa.chk, io->io.ppa.lbk, band->id,
+		ftl_ppa_addr_pack(dev, io->io.ppa));
 	ftl_io_read((struct ftl_io *)io);
 	return 0;
 }
@@ -924,6 +927,8 @@ ftl_read_lba_map_cb(struct ftl_io *io, void *arg, int status)
 	}
 
 	ftl_process_lba_map_requests(io->dev, lba_map, lbk_off, io->lbk_cnt, status);
+	SPDK_DAPULOG("ppa: group(%u), pu(%u), chunk(%03u), block(%04u), band(%03u) - %llx\n", io->ppa.grp, io->ppa.pu, io->ppa.chk, io->ppa.lbk, io->band->id,
+		ftl_ppa_addr_pack(io->dev, io->ppa));
 }
 
 static struct ftl_lba_map_request *
