@@ -354,7 +354,9 @@ ftl_submit_erase(struct ftl_io *io)
 
 		assert(ppa.lbk == 0);
 		ppa_packed = ftl_ppa_addr_pack(dev, ppa);
+#ifdef DAPU_PRINT
 		SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%03u), band(%03u) - %llx\n", ppa.grp, ppa.pu, ppa.chk, ppa.lbk, io->band->id ,ppa_packed);
+#endif
 
 		ftl_trace_submission(dev, io, ppa, 1);
 		rc = spdk_nvme_ocssd_ns_cmd_vector_reset(dev->ns, ftl_get_write_qpair(dev),
@@ -999,10 +1001,13 @@ ftl_submit_read(struct ftl_io *io)
 		}
 
 		assert(lbk_cnt > 0);
+
+#ifdef DAPU_PRINT
 		//SPDK_DAPULOG("***** lba = %14lx(%u), ppa = %14lx\n", io->lba.single, io->lbk_cnt, ftl_ppa_addr_pack(io->dev, io->ppa));
 		SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", io->ppa.grp, io->ppa.pu, io->ppa.chk, io->ppa.lbk,
 			io->band->id,
 			ftl_ppa_addr_pack(io->dev, io->ppa));
+#endif
 
 		ftl_trace_submission(dev, io, ppa, lbk_cnt);
 		rc = spdk_nvme_ns_cmd_read(dev->ns, ftl_get_read_qpair(dev),
@@ -1547,10 +1552,14 @@ ftl_submit_write(struct ftl_wptr *wptr, struct ftl_io *io)
 	int			rc = 0;
 
 	assert(io->lbk_cnt % dev->xfer_size == 0);
+
+#ifdef DAPU_PRINT
 	//SPDK_DAPULOG("***** ppa = %14lx, offset = %14lx\n", ftl_ppa_addr_pack(wptr->dev, wptr->ppa), wptr->offset);
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%4u), band(%03u) - %llx\n", wptr->ppa.grp, wptr->ppa.pu, wptr->ppa.chk, wptr->ppa.lbk,
 		wptr->band->id,
 		ftl_ppa_addr_pack(wptr->dev, wptr->ppa));
+#endif
+
 	while (io->iov_pos < io->iov_cnt) {
 		/* There are no guarantees of the order of completion of NVMe IO submission queue */
 		/* so wait until chunk is not busy before submitting another write */

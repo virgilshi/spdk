@@ -388,11 +388,13 @@ ftl_dev_init_bands(struct spdk_ftl_dev *dev)
 	for (i = 0; i < ftl_dev_num_bands(dev); ++i) {
 		band = &dev->bands[i];
 		band->tail_md_ppa = ftl_band_tail_md_ppa(band);
+#ifdef DAPU_PRINT
 		SPDK_DAPULOG("Operational chunks in band(%u):", band->id);
 		CIRCLEQ_FOREACH(chunk, &band->chunks, circleq) {
 			printf(" %u", chunk->pos);
 		}
 		printf("\n");
+#endif		
 	}
 
 	ftl_remove_empty_bands(dev);

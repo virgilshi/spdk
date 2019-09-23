@@ -1295,8 +1295,9 @@ nvme_pcie_qpair_submit_tracker(struct spdk_nvme_qpair *qpair, struct nvme_tracke
 	t_cdw11 = req->cmd.cdw11;
 	t_cdw10 = req->cmd.cdw10;
 	len = (req->cmd.cdw12 & 0xFFFF) + 1;
+#ifdef DAPU_PRINT
 	SPDK_DAPULOG("nvme lba: %16llx, len: %u\n", (t_cdw11 << 32) | t_cdw11, len);
-	
+#endif
 	if (spdk_unlikely(++pqpair->sq_tail == pqpair->num_entries)) {
 		pqpair->sq_tail = 0;
 	}
@@ -1373,7 +1374,9 @@ nvme_pcie_qpair_complete_tracker(struct spdk_nvme_qpair *qpair, struct nvme_trac
 	t_cdw11 = req->cmd.cdw11;
 	t_cdw10 = req->cmd.cdw10;
 	len = (req->cmd.cdw12 & 0xFFFF) + 1;
+#ifdef DAPU_PRINT
 	SPDK_DAPULOG("nvme lba: %16llx, len: %u\n", (t_cdw11 << 32) | t_cdw11, len);
+#endif
 }
 
 static void
