@@ -519,10 +519,12 @@ ftl_reloc_read(struct ftl_band_reloc *breloc, struct ftl_reloc_move *move)
 	}
 
 	breloc->num_outstanding++;
+#ifdef DAPU_PRINT
 	//SPDK_DAPULOG("***** lba = %lx(%u), ppa = %lx\n", move->io->lba.single, move->io->lbk_cnt, ftl_ppa_addr_pack(move->io->dev, move->io->ppa));
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", ppa.grp, ppa.pu, ppa.chk, ppa.lbk, 
 		move->io->band->id,
 		ftl_ppa_addr_pack(breloc->band->dev, ppa));
+#endif
 	ftl_io_read(move->io);
 	return 0;
 }
