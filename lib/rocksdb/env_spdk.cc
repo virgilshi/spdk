@@ -243,8 +243,17 @@ class SpdkWritableFile : public WritableFile
 	struct spdk_file *mFile;
 	uint64_t mSize;
 
+#ifdef HUST
+	uint8_t	mlevel;
+#endif
+
 public:
 	SpdkWritableFile(struct spdk_file *file) : mFile(file), mSize(0) {}
+
+#ifdef HUST
+	SpdkWritableFile(struct spdk_file *file, uint8_t level) : mFile(file), mSize(0), mlevel(level) { assert(mFile != NULL); mFile->level = level; }
+#endif
+
 	~SpdkWritableFile()
 	{
 		if (mFile != NULL) {

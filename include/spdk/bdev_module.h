@@ -402,6 +402,10 @@ struct spdk_bdev {
 		/** histogram enabled on this bdev */
 		bool	histogram_enabled;
 		bool	histogram_in_progress;
+
+#ifdef HUST
+		uint8_t	level;
+#endif
 	} internal;
 };
 
@@ -425,6 +429,10 @@ struct spdk_bdev_io {
 
 	/** Enumerated value representing the I/O type. */
 	uint8_t type;
+
+#ifdef HUST
+	uint8_t level;
+#endif
 
 	/** A single iovec element for use by this bdev_io. */
 	struct iovec iov;

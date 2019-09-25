@@ -171,6 +171,10 @@ struct spdk_io_channel {
 	 *  pairs, or references to child device spdk_io_channels (i.e.
 	 *  virtual bdevs).
 	 */
+
+#ifdef HUST					////////////// sl
+	uint8_t			level; ////// indicate which level the io belongs to.
+#endif
 };
 
 /**

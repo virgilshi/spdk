@@ -141,6 +141,10 @@ struct spdk_bs_request_set {
 	} u;
 
 	TAILQ_ENTRY(spdk_bs_request_set) link;
+
+#ifdef HUST
+	uint8_t		level;
+#endif
 };
 
 void spdk_bs_call_cpl(struct spdk_bs_cpl *cpl, int bserrno);

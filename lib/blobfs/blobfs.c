@@ -137,6 +137,10 @@ struct spdk_file {
 	TAILQ_HEAD(open_requests_head, spdk_fs_request) open_requests;
 	TAILQ_HEAD(sync_requests_head, spdk_fs_request) sync_requests;
 	TAILQ_ENTRY(spdk_file)	cache_tailq;
+
+#ifdef HUST
+	uint8_t level;
+#endif
 };
 
 struct spdk_deleted_file {
@@ -2265,6 +2269,10 @@ __file_flush(void *ctx)
 	BLOBFS_TRACE(file, "offset=%jx length=%jx page start=%jx num=%jx\n",
 		     offset, length, start_lba, num_lba);
 	pthread_spin_unlock(&file->lock);
+
+#ifdef HUST
+	file->blob.level = file->level;
+#endif
 	spdk_blob_io_write(file->blob, file->fs->sync_target.sync_fs_channel->bs_channel,
 			   next->buf + (start_lba * lba_size) - next->offset,
 			   start_lba, num_lba, __file_flush_done, req);

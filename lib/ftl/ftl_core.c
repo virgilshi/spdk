@@ -1991,6 +1991,10 @@ spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lb
 		return -ENOMEM;
 	}
 
+#ifdef HUST
+	io->level = ch->level;
+	SPDK_DAPULOG("io(i.e., lba + lba_cnt) belongs to level(%d)\n", ch->level);
+#endif
 	ftl_io_write(io);
 
 	return 0;
