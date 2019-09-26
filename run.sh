@@ -8,7 +8,7 @@ do
 			make clean
 			./configure --enable-debug 
 		    #./configure --enable-debug --with-ftl
-			make
+			make -j4
 			;;
 		s)
 			echo "scripts/setup.sh"
@@ -40,7 +40,7 @@ do
 			;;
 		p)
 			echo "perf test"
-			./test/bdev/bdevperf/bdevperf -q 1 -s 1024 -w randwrite -t 900 -o 4096 -m 0x1 -c /root/bdev.conf
+			./test/bdev/bdevperf/bdevperf -q 1 -s 1024 -w write -t 90 -o 4096 -m 0x1 -c /root/bdev.conf
 			;;
 		w)
 			echo "PCIe perf test"
