@@ -59,6 +59,8 @@
 #include "spdk_internal/memory.h"
 
 extern pid_t g_spdk_nvme_pid;
+extern int g_ret;
+
 
 /*
  * Some Intel devices support vendor-unique read latency log page even
@@ -989,7 +991,7 @@ nvme_request_remove_child(struct nvme_request *parent, struct nvme_request *chil
 	TAILQ_REMOVE(&parent->children, child, child_tailq);
 }
 
-extern int g_ret;
+
 
 static inline void
 nvme_cb_complete_child(void *child_arg, const struct spdk_nvme_cpl *cpl)

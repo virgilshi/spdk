@@ -41,6 +41,8 @@ struct nvme_string {
 	const char	*str;
 };
 
+int g_ret;
+
 static const struct nvme_string admin_opcode[] = {
 	{ SPDK_NVME_OPC_DELETE_IO_SQ, "DELETE IO SQ" },
 	{ SPDK_NVME_OPC_CREATE_IO_SQ, "CREATE IO SQ" },
@@ -537,7 +539,6 @@ nvme_qpair_deinit(struct spdk_nvme_qpair *qpair)
 	spdk_free(qpair->req_buf);
 }
 
-int g_ret;
 int
 nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *req)
 {
