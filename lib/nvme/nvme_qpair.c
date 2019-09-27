@@ -34,6 +34,8 @@
 #include "nvme_internal.h"
 #include "spdk/nvme_ocssd.h"
 
+int g_ret;
+
 static void nvme_qpair_abort_reqs(struct spdk_nvme_qpair *qpair, uint32_t dnr);
 
 struct nvme_string {
@@ -41,7 +43,7 @@ struct nvme_string {
 	const char	*str;
 };
 
-int g_ret;
+
 
 static const struct nvme_string admin_opcode[] = {
 	{ SPDK_NVME_OPC_DELETE_IO_SQ, "DELETE IO SQ" },
