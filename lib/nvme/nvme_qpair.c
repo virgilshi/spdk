@@ -537,6 +537,7 @@ nvme_qpair_deinit(struct spdk_nvme_qpair *qpair)
 	spdk_free(qpair->req_buf);
 }
 
+int g_ret;
 int
 nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *req)
 {
@@ -563,10 +564,13 @@ nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *re
 					child_req->cmd.cdw12 = 16 - 1;   
 					rc = nvme_qpair_submit_request(qpair, child_req);
 					child_req->cmd.cdw10 += 16;  /////////////// update the lba of next child child io
+					g_ret = 0;
+					while (g_ret == 0) {}
+	#ifdef 0
 					if (child_req->cpl.status.sct == SPDK_NVME_SCT_GENERIC) {  
 						while (child_req->cpl.status.sc != SPDK_NVME_SC_SUCCESS) {} //////// wait and issue next io until current io is completed.
 					}
-					
+	#endif
 					if (spdk_unlikely(rc != 0)) {
 						child_req_failed = true;
 					}

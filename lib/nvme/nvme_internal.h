@@ -989,6 +989,8 @@ nvme_request_remove_child(struct nvme_request *parent, struct nvme_request *chil
 	TAILQ_REMOVE(&parent->children, child, child_tailq);
 }
 
+extern int g_ret;
+
 static inline void
 nvme_cb_complete_child(void *child_arg, const struct spdk_nvme_cpl *cpl)
 {
@@ -1006,6 +1008,8 @@ nvme_cb_complete_child(void *child_arg, const struct spdk_nvme_cpl *cpl)
 				      parent, &parent->parent_status);
 		nvme_free_request(parent);
 	}
+	////////// sl 
+	g_ret = 1;
 }
 
 static inline void
