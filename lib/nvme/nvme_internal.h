@@ -34,6 +34,8 @@
 #ifndef __NVME_INTERNAL_H__
 #define __NVME_INTERNAL_H__
 
+#include "g_var.h"
+
 #include "spdk/config.h"
 #include "spdk/likely.h"
 #include "spdk/stdinc.h"
@@ -59,8 +61,6 @@
 #include "spdk_internal/memory.h"
 
 extern pid_t g_spdk_nvme_pid;
-extern int g_ret;
-
 
 /*
  * Some Intel devices support vendor-unique read latency log page even
