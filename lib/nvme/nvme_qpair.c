@@ -554,6 +554,25 @@ nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *re
 		 * request itself, since the parent is the original unsplit request.
 		 */
 		TAILQ_FOREACH_SAFE(child_req, &req->children, child_tailq, tmp) {
+
+#ifdef HUST_SPILT_IO 			/////////// sl 
+			if (child_req->cmd->cdw12 + 1 == 64) ///////////////// child req size is up to 64 (giant for OCSSD), split it into four child io further
+			for (int i = 0; i < 3; ++i) {	//////////// three of child child are proceeded, left one of which is done in below, 
+											/////////////////in order to keep compatitle with existing framework
+				if (spdk_likely(!child_req_failed)) {
+					child_req->cmd.cdw12 = 16;   
+					rc = nvme_qpair_submit_request(qpair, child_req);
+					child_req->cmd.cdw10 += 16;  /////////////// update the lba of next child child io
+					if (child_req->cpl.status.sct == SPDK_NVME_SCT_COMMAND_SPECIFIC) {  
+						while (child_req->cpl.status.sc != SPDK_NVME_SC_SUCCESS) {} //////// wait and issue next io until current io is completed.
+					}
+					
+					if (spdk_unlikely(rc != 0)) {
+						child_req_failed = true;
+					}
+				}
+			}
+#endif
 			if (spdk_likely(!child_req_failed)) {
 				rc = nvme_qpair_submit_request(qpair, child_req);
 				if (spdk_unlikely(rc != 0)) {
