@@ -560,7 +560,7 @@ nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *re
 			for (int i = 0; i < 3; ++i) {	//////////// three of child child are proceeded, left one of which is done in below, 
 											/////////////////in order to keep compatitle with existing framework
 				if (spdk_likely(!child_req_failed)) {
-					child_req->cmd.cdw12 = 16;   
+					child_req->cmd.cdw12 = 16 - 1;   
 					rc = nvme_qpair_submit_request(qpair, child_req);
 					child_req->cmd.cdw10 += 16;  /////////////// update the lba of next child child io
 					if (child_req->cpl.status.sct == SPDK_NVME_SCT_COMMAND_SPECIFIC) {  
