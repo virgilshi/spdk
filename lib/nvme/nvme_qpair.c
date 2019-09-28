@@ -561,7 +561,7 @@ nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *re
 
 #ifdef HUST_SPILT_IO 			/////////// sl 
 			if (child_req->cmd.cdw12 + 1 == 64) ///////////////// child req size is up to 64 (giant for OCSSD), split it into four child io further
-			for (int i = 0; i < 3; ++i) {	//////////// three of child child are proceeded, left one of which is done in below, 
+			for (int i = 0; i < 1; ++i) {	//////////// three of child child are proceeded, left one of which is done in below, 
 											/////////////////in order to keep compatitle with existing framework
 				if (spdk_likely(!child_req_failed)) {
 					child_req->cmd.cdw12 = 16 - 1;   
