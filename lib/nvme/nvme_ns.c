@@ -64,6 +64,7 @@ nvme_ns_set_identify_data(struct spdk_nvme_ns *ns)
 	}
 
 	ns->sectors_per_max_io = spdk_nvme_ns_get_max_io_xfer_size(ns) / ns->extended_lba_size;
+	ns->sectors_per_max_io = 16 ////////////// sl
 
 	if (nsdata->noiob) {
 		ns->sectors_per_stripe = nsdata->noiob;
