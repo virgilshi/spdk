@@ -992,7 +992,7 @@ nvme_request_remove_child(struct nvme_request *parent, struct nvme_request *chil
 }
 
 static inline void
-shiliu_f() {
+shiliu_f(void) {
 
 	printf("g_var_ = %d\n", g_var_);
 	g_var_ = 1;
