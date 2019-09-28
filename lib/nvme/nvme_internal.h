@@ -955,9 +955,6 @@ nvme_complete_request(spdk_nvme_cmd_cb cb_fn, void *cb_arg, struct spdk_nvme_qpa
 		}
 	}
 
-
-	 g_var_ = 1;
-
 	if (cb_fn) {
 		cb_fn(cb_arg, cpl);
 	}

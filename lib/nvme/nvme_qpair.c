@@ -34,8 +34,6 @@
 #include "nvme_internal.h"
 #include "spdk/nvme_ocssd.h"
 
-int g_var_;
-
 static void nvme_qpair_abort_reqs(struct spdk_nvme_qpair *qpair, uint32_t dnr);
 
 struct nvme_string {
