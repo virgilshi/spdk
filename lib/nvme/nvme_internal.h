@@ -991,7 +991,8 @@ nvme_request_remove_child(struct nvme_request *parent, struct nvme_request *chil
 	TAILQ_REMOVE(&parent->children, child, child_tailq);
 }
 
-void shiliu_f() {
+static inline void
+shiliu_f() {
 
 	printf("g_var_ = %d\n", g_var_);
 	g_var_ = 1;
