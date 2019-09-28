@@ -568,7 +568,7 @@ nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *re
 					rc = nvme_qpair_submit_request(qpair, child_req);
 					child_req->cmd.cdw10 += 16;  /////////////// update the lba of next child child io
 					g_var_ = 0;
-					while (g_var_ == 0) {}
+//					while (g_var_ == 0) {}
 	#if 0
 					if (child_req->cpl.status.sct == SPDK_NVME_SCT_GENERIC) {  
 						while (child_req->cpl.status.sc != SPDK_NVME_SC_SUCCESS) {} //////// wait and issue next io until current io is completed.
