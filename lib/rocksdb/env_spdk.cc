@@ -475,10 +475,36 @@ public:
 			return EnvWrapper::NewRandomAccessFile(fname, result, options);
 		}
 	}
+#ifdef HUST					   
+   virtual Status NewWritableFile(const std::string &fname,
+						  unique_ptr<WritableFile> *result,
+						  const EnvOptions &options, int level) override
+   {
+	   if (fname.compare(0, mDirectory.length(), mDirectory) == 0) {
+		   std::string name = sanitize_path(fname, mDirectory);
+		   struct spdk_file *file;
+		   int rc;
 
+		   set_channel();
+		   rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
+						  SPDK_BLOBFS_OPEN_CREATE, &file);
+		   fprintf(f, "%s - %d\n", name, level);
+		   if (rc == 0) {
+			   
+			   result->reset(new SpdkWritableFile(file, level));
+			   return Status::OK();
+		   } else {
+			   errno = -rc;
+			   return Status::IOError(name, strerror(errno));
+		   }
+	   } else {
+		   return EnvWrapper::NewWritableFile(fname, result, options);
+	   }
+   }
+#endif
 	virtual Status NewWritableFile(const std::string &fname,
 				       unique_ptr<WritableFile> *result,
-				       const EnvOptions &options, int level) override
+				       const EnvOptions &options) override
 	{
 		if (fname.compare(0, mDirectory.length(), mDirectory) == 0) {
 			std::string name = sanitize_path(fname, mDirectory);
@@ -488,7 +514,7 @@ public:
 			set_channel();
 			rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 					       SPDK_BLOBFS_OPEN_CREATE, &file);
-			fprintf(f, "%s - %d\n", name, level);
+		//	fprintf(f, "%s - %d\n", name, level);
 			if (rc == 0) {
 				
 				result->reset(new SpdkWritableFile(file, level));
