@@ -478,7 +478,7 @@ public:
 
 	virtual Status NewWritableFile(const std::string &fname,
 				       unique_ptr<WritableFile> *result,
-				       const EnvOptions &options) override
+				       const EnvOptions &options, int level) override
 	{
 		if (fname.compare(0, mDirectory.length(), mDirectory) == 0) {
 			std::string name = sanitize_path(fname, mDirectory);
@@ -488,8 +488,10 @@ public:
 			set_channel();
 			rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 					       SPDK_BLOBFS_OPEN_CREATE, &file);
+			fprintf(f, "%s - %d\n", name, level);
 			if (rc == 0) {
-				result->reset(new SpdkWritableFile(file));
+				
+				result->reset(new SpdkWritableFile(file, level));
 				return Status::OK();
 			} else {
 				errno = -rc;
@@ -775,6 +777,7 @@ SpdkEnv::~SpdkEnv()
 			spdk_file_close(file, g_sync_args.channel);
 			iter = spdk_fs_iter_next(iter);
 		}
+		f.close();
 	}
 
 	spdk_app_start_shutdown();
@@ -787,6 +790,7 @@ Env *NewSpdkEnv(Env *base_env, const std::string &dir, const std::string &conf,
 	try {
 		SpdkEnv *spdk_env = new SpdkEnv(base_env, dir, conf, bdev, cache_size_in_mb);
 		if (g_fs != NULL) {
+			statit FILE* f = fopen("/root/level-sst info.log", "w");
 			return spdk_env;
 		} else {
 			delete spdk_env;
