@@ -803,7 +803,7 @@ SpdkEnv::~SpdkEnv()
 			spdk_file_close(file, g_sync_args.channel);
 			iter = spdk_fs_iter_next(iter);
 		}
-		f.close();
+		//f.close();
 	}
 
 	spdk_app_start_shutdown();
@@ -816,7 +816,7 @@ Env *NewSpdkEnv(Env *base_env, const std::string &dir, const std::string &conf,
 	try {
 		SpdkEnv *spdk_env = new SpdkEnv(base_env, dir, conf, bdev, cache_size_in_mb);
 		if (g_fs != NULL) {
-			static FILE* f = fopen("/root/level-sst info.log", "w");
+			//static FILE* f = fopen("/root/level-sst info.log", "w");
 			return spdk_env;
 		} else {
 			delete spdk_env;
