@@ -475,7 +475,7 @@ public:
 			return EnvWrapper::NewRandomAccessFile(fname, result, options);
 		}
 	}
-#ifdef HUST					   
+#ifdef 1					   
    virtual Status NewWritableFile(const std::string &fname,
 						  unique_ptr<WritableFile> *result,
 						  const EnvOptions &options, int level) override
@@ -488,7 +488,7 @@ public:
 		   set_channel();
 		   rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 						  SPDK_BLOBFS_OPEN_CREATE, &file);
-		   fprintf(f, "%s - %d\n", name, level);
+		   //fprintf(f, "%s - %d\n", name, level);
 		   if (rc == 0) {
 			   
 			   result->reset(new SpdkWritableFile(file, level));
