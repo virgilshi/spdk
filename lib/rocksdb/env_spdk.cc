@@ -517,7 +517,7 @@ public:
 		//	fprintf(f, "%s - %d\n", name, level);
 			if (rc == 0) {
 				
-				result->reset(new SpdkWritableFile(file, level));
+				result->reset(new SpdkWritableFile(file));
 				return Status::OK();
 			} else {
 				errno = -rc;
