@@ -475,7 +475,7 @@ public:
 			return EnvWrapper::NewRandomAccessFile(fname, result, options);
 		}
 	}
-#if 1					   
+#if 0					   
    virtual Status NewWritableFile(const std::string &fname,
 						  unique_ptr<WritableFile> *result,
 						  const EnvOptions &options, int level) override
