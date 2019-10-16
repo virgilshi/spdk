@@ -51,7 +51,7 @@ extern "C" {
 
 namespace rocksdb
 {
-
+// static FILE* f = NULL;
 struct spdk_filesystem *g_fs = NULL;
 struct spdk_bs_dev *g_bs_dev;
 uint32_t g_lcore = 0;
@@ -475,7 +475,7 @@ public:
 			return EnvWrapper::NewRandomAccessFile(fname, result, options);
 		}
 	}
-#if 0					   
+#if 1					   
    virtual Status NewWritableFile(const std::string &fname,
 						  unique_ptr<WritableFile> *result,
 						  const EnvOptions &options, int level) override
@@ -488,10 +488,12 @@ public:
 		   set_channel();
 		   rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 						  SPDK_BLOBFS_OPEN_CREATE, &file);
-		   //fprintf(f, "%s - %d\n", name, level);
+		//    assert(f != NULL && "f == NULL");
+		//    fprintf(f, "%s - %d\n", name.c_str(), level);
+		   file->level
 		   if (rc == 0) {
 			   
-			   result->reset(new SpdkWritableFile(file, level));
+			   result->reset(new SpdkWritableFile(file));
 			   return Status::OK();
 		   } else {
 			   errno = -rc;
@@ -514,7 +516,6 @@ public:
 			set_channel();
 			rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 					       SPDK_BLOBFS_OPEN_CREATE, &file);
-		//	fprintf(f, "%s - %d\n", name, level);
 			if (rc == 0) {
 				
 				result->reset(new SpdkWritableFile(file));
@@ -816,7 +817,8 @@ Env *NewSpdkEnv(Env *base_env, const std::string &dir, const std::string &conf,
 	try {
 		SpdkEnv *spdk_env = new SpdkEnv(base_env, dir, conf, bdev, cache_size_in_mb);
 		if (g_fs != NULL) {
-			//static FILE* f = fopen("/root/level-sst info.log", "w");
+			// f = fopen("/root/level-sst-info.log", "w");
+			assert(f != NULL && "file open err\n");
 			return spdk_env;
 		} else {
 			delete spdk_env;
