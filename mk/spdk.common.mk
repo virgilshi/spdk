@@ -215,8 +215,8 @@ endif
 COMMON_CFLAGS += -pthread
 LDFLAGS += -pthread
 
-CFLAGS   += $(COMMON_CFLAGS) -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -DHUST_SPILT_IO #-DHUST # Enable HUST
-CXXFLAGS += $(COMMON_CFLAGS) -std=c++0x
+CFLAGS   += $(COMMON_CFLAGS) -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -DHUST # Enable HUST
+CXXFLAGS += $(COMMON_CFLAGS) -std=c++0x -DHUST
 
 SYS_LIBS += -lrt
 SYS_LIBS += -luuid

@@ -1992,8 +1992,14 @@ spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lb
 	}
 
 #ifdef HUST
-	io->level = ch->level;
-	SPDK_DAPULOG("io(i.e., lba + lba_cnt) belongs to level(%d)\n", ch->level);
+	io->level = ch->level; ///////////// deliver level of channel info to one of corresponding io.
+	// SPDK_DAPULOG("io, lba: %lu, lba_cnt: %u, level: %d\n", lba, lba_cnt, io->level);
+	static FILE* f = NULL;
+	if (f == NULL) f = fopen("/root/sl/ftl_info.log", "w");
+	assert(f != NULL && "cannot open special file!!!\n");
+	fprintf(f, "io, lba: %lu, lba_cnt: %u, level: %d, file: %s\n", lba, lba_cnt, io->level, ch->filename);
+	SPDK_DAPULOG("io, lba: %lu, lba_cnt: %u, level: %d, file: %s\n", lba, lba_cnt, io->level, ch->filename);
+	fflush(f);
 #endif
 	ftl_io_write(io);
 

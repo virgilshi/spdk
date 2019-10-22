@@ -372,6 +372,12 @@ spdk_bs_batch_write_dev(spdk_bs_batch_t *batch, void *payload,
 	SPDK_DEBUGLOG(SPDK_LOG_BLOB_RW, "Writing %" PRIu32 " blocks to LBA %" PRIu64 "\n", lba_count, lba);
 
 	set->u.batch.outstanding_ops++;
+#ifdef HUST
+	SPDK_DAPULOG("channel, level: %d, filename: %s\n", channel->dev_channel->level, channel->dev_channel->filename);
+	// assert(channel->dev_channel->level = batch->level && "check whether levels are consistent.");
+	// strncpy(channel->dev_channel->filename, batch->filename, sizeof(batch->filename));
+	
+#endif
 	channel->dev->write(channel->dev, channel->dev_channel, payload, lba, lba_count,
 			    &set->cb_args);
 }

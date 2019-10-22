@@ -121,6 +121,7 @@ struct spdk_blob {
 
 #ifdef HUST
 	uint8_t		level;
+	char		filename[50];
 #endif
 
 	enum spdk_blob_state		state;
@@ -205,7 +206,8 @@ struct spdk_bs_channel {
 	TAILQ_HEAD(, spdk_bs_request_set) queued_io;
 
 #ifdef HUST
-	uint8_t		level;	
+	uint8_t		level;
+	char		filename[50];
 #endif
 };
 

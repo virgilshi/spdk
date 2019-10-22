@@ -174,6 +174,7 @@ struct spdk_io_channel {
 
 #ifdef HUST					////////////// sl
 	uint8_t			level; ////// indicate which level the io belongs to.
+	char				filename[50];
 #endif
 };
 

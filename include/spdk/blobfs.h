@@ -590,6 +590,10 @@ void spdk_file_read_async(struct spdk_file *file, struct spdk_io_channel *channe
 void spdk_file_sync_async(struct spdk_file *file, struct spdk_io_channel *channel,
 			  spdk_file_op_complete cb_fn, void *cb_arg);
 
+#ifdef HUST
+extern void spdk_fs_set_file_level(struct spdk_file *file, int level); /////////// self-defination method for setting file level.
+extern int spdk_fs_get_file_level(struct spdk_file *file);
+#endif
 #ifdef __cplusplus
 }
 #endif

@@ -144,6 +144,7 @@ struct spdk_bs_request_set {
 
 #ifdef HUST
 	uint8_t		level;
+	char		filename[50];
 #endif
 };
 

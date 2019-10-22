@@ -45,6 +45,9 @@
 #include "spdk_internal/log.h"
 #include "spdk/trace.h"
 
+#ifdef HUST
+#include "../blob/blobstore.h"
+#endif
 #define BLOBFS_TRACE(file, str, args...) \
 	SPDK_DEBUGLOG(SPDK_LOG_BLOBFS, "file=%s " str, file->name, ##args)
 
@@ -134,13 +137,12 @@ struct spdk_file {
 	pthread_spinlock_t	lock;
 	struct cache_buffer	*last;
 	struct cache_tree	*tree;
-	TAILQ_HEAD(open_requests_head, spdk_fs_request) open_requests;
-	TAILQ_HEAD(sync_requests_head, spdk_fs_request) sync_requests;
-	TAILQ_ENTRY(spdk_file)	cache_tailq;
-
 #ifdef HUST
 	uint8_t level;
 #endif
+	TAILQ_HEAD(open_requests_head, spdk_fs_request) open_requests;
+	TAILQ_HEAD(sync_requests_head, spdk_fs_request) sync_requests;
+	TAILQ_ENTRY(spdk_file)	cache_tailq;
 };
 
 struct spdk_deleted_file {
@@ -254,6 +256,19 @@ struct spdk_fs_cb_args {
 static void cache_free_buffers(struct spdk_file *file);
 static void spdk_fs_io_device_unregister(struct spdk_filesystem *fs);
 static void spdk_fs_free_io_channels(struct spdk_filesystem *fs);
+
+#ifdef HUST
+void spdk_fs_set_file_level(struct spdk_file *file, int level) {
+	pthread_spin_lock(&file->lock);
+	assert(file != NULL && "file is NULL");
+	file->level = level;
+	pthread_spin_unlock(&file->lock);
+}
+int spdk_fs_get_file_level(struct spdk_file *file) {
+	return file->level;
+}
+
+#endif
 
 void
 spdk_fs_opts_init(struct spdk_blobfs_opts *opts)
@@ -2268,11 +2283,14 @@ __file_flush(void *ctx)
 	next->in_progress = true;
 	BLOBFS_TRACE(file, "offset=%jx length=%jx page start=%jx num=%jx\n",
 		     offset, length, start_lba, num_lba);
-	pthread_spin_unlock(&file->lock);
-
 #ifdef HUST
-	file->blob.level = file->level;
-#endif
+	file->blob->level = file->level;
+	strncpy(file->blob->filename, file->name, 50/*sizeof(file->name)*/);
+	file->fs->sync_target.sync_fs_channel->bs_channel->level = file->level;
+	strncpy(file->fs->sync_target.sync_fs_channel->bs_channel->filename, file->name, 50);
+	SPDK_DAPULOG("file, level: %d, name: %s\n", file->level, file->name);
+#endif 
+	pthread_spin_unlock(&file->lock);
 	spdk_blob_io_write(file->blob, file->fs->sync_target.sync_fs_channel->bs_channel,
 			   next->buf + (start_lba * lba_size) - next->offset,
 			   start_lba, num_lba, __file_flush_done, req);

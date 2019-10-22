@@ -1870,9 +1870,6 @@ _spdk_blob_request_submit_op_single(struct spdk_io_channel *_ch, struct spdk_blo
 		/* This blob I/O is frozen */
 		spdk_bs_user_op_t *op;
 		struct spdk_bs_channel *bs_channel = spdk_io_channel_get_ctx(_ch);
-#ifdef HUST ///////////////////// sl
-		bs_channel->level = _ch->level; //// transfer tag `level` to bs
-#endif
 
 		op = spdk_bs_user_op_alloc(_ch, &cpl, op_type, blob, payload, 0, offset, length);
 		if (!op) {
@@ -1922,8 +1919,11 @@ _spdk_blob_request_submit_op_single(struct spdk_io_channel *_ch, struct spdk_blo
 				cb_fn(cb_arg, -ENOMEM);
 				return;
 			}
-#ifdef HUST ////////////////// sl
-			batch->level = blob->level;
+#ifdef HUST ///////// for absolutely certain, set batch->level and facilate ready to assert channel_io->level == batch->level
+			SPDK_DAPULOG("blob: level: %d, filename: %s\n", blob->level, blob->filename);
+			batch->level = blob->level;	
+			strncpy(batch->filename, blob->filename, sizeof(blob->filename));
+			// assert(blob->level == _ch->level && "batch, blob, _ch, among which individual levels are inconsistent.");
 #endif
 			if (op_type == SPDK_BLOB_WRITE) {
 				spdk_bs_batch_write_dev(batch, payload, lba, lba_count);
@@ -1986,10 +1986,6 @@ _spdk_blob_request_submit_op(struct spdk_blob *blob, struct spdk_io_channel *_ch
 		cb_fn(cb_arg, -EINVAL);
 		return;
 	}
-	
-#ifdef HUST /////////////////////// sl
-	_channel->level = blob->level; ///// transfer tag `level` to io channel
-#endif
 
 	if (length <= _spdk_bs_num_io_units_to_cluster_boundary(blob, offset)) {
 		_spdk_blob_request_submit_op_single(_channel, blob, payload, offset, length,

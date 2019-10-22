@@ -243,16 +243,8 @@ class SpdkWritableFile : public WritableFile
 	struct spdk_file *mFile;
 	uint64_t mSize;
 
-#ifdef HUST
-	uint8_t	mlevel;
-#endif
-
 public:
 	SpdkWritableFile(struct spdk_file *file) : mFile(file), mSize(0) {}
-
-#ifdef HUST
-	SpdkWritableFile(struct spdk_file *file, uint8_t level) : mFile(file), mSize(0), mlevel(level) { assert(mFile != NULL); mFile->level = level; }
-#endif
 
 	~SpdkWritableFile()
 	{
@@ -274,6 +266,7 @@ public:
 
 		set_channel();
 		rc = spdk_file_truncate(mFile, g_sync_args.channel, size);
+		// SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		if (!rc) {
 			mSize = size;
 			return Status::OK();
@@ -286,12 +279,14 @@ public:
 	{
 		set_channel();
 		spdk_file_close(mFile, g_sync_args.channel);
+		// SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		mFile = NULL;
 		return Status::OK();
 	}
 	virtual Status Append(const Slice &data) override;
 	virtual Status Flush() override
 	{
+		// SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		return Status::OK();
 	}
 	virtual Status Sync() override
@@ -300,6 +295,7 @@ public:
 
 		set_channel();
 		rc = spdk_file_sync(mFile, g_sync_args.channel);
+		// SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		if (!rc) {
 			return Status::OK();
 		} else {
@@ -313,6 +309,7 @@ public:
 
 		set_channel();
 		rc = spdk_file_sync(mFile, g_sync_args.channel);
+		SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		if (!rc) {
 			return Status::OK();
 		} else {
@@ -322,6 +319,7 @@ public:
 	}
 	virtual bool IsSyncThreadSafe() const override
 	{
+		SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		return true;
 	}
 	virtual uint64_t GetFileSize() override
@@ -331,6 +329,7 @@ public:
 	virtual Status InvalidateCache(__attribute__((unused)) size_t offset,
 				       __attribute__((unused)) size_t length) override
 	{
+		SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		return Status::OK();
 	}
 	virtual Status Allocate(uint64_t offset, uint64_t len) override
@@ -339,6 +338,7 @@ public:
 
 		set_channel();
 		rc = spdk_file_truncate(mFile, g_sync_args.channel, offset + len);
+		SPDK_DAPULOG("filename: %s, level: %d\n", spdk_file_get_name(mFile), spdk_fs_get_file_level(mFile));
 		if (!rc) {
 			return Status::OK();
 		} else {
@@ -357,6 +357,7 @@ public:
 		 */
 		set_channel();
 		rc = spdk_file_sync(mFile, g_sync_args.channel);
+		SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 		if (!rc) {
 			return Status::OK();
 		} else {
@@ -383,7 +384,16 @@ SpdkWritableFile::Append(const Slice &data)
 	int64_t rc;
 
 	set_channel();
+	// if (mFile->name[0] == 't') {
+	// 	printf("mFile->name: %s, level: %d\n", mFile->name.c_str(), mFile->level);
+	// 	while (1)
+	// 	{
+	// 		/* code */
+	// 	}
+		
+	// }
 	rc = spdk_file_write(mFile, g_sync_args.channel, (void *)data.data(), mSize, data.size());
+	// SPDK_DAPULOG("filename: %s\n", spdk_file_get_name(mFile));
 	if (rc >= 0) {
 		mSize += data.size();
 		return Status::OK();
@@ -490,7 +500,11 @@ public:
 						  SPDK_BLOBFS_OPEN_CREATE, &file);
 		//    assert(f != NULL && "f == NULL");
 		//    fprintf(f, "%s - %d\n", name.c_str(), level);
-		   file->level
+		//    file->level
+			// level++;
+#ifdef HUST			
+			spdk_fs_set_file_level(file, level);
+#endif
 		   if (rc == 0) {
 			   
 			   result->reset(new SpdkWritableFile(file));
@@ -818,7 +832,7 @@ Env *NewSpdkEnv(Env *base_env, const std::string &dir, const std::string &conf,
 		SpdkEnv *spdk_env = new SpdkEnv(base_env, dir, conf, bdev, cache_size_in_mb);
 		if (g_fs != NULL) {
 			// f = fopen("/root/level-sst-info.log", "w");
-			assert(f != NULL && "file open err\n");
+			// assert(f != NULL && "file open err\n");
 			return spdk_env;
 		} else {
 			delete spdk_env;
