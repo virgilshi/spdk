@@ -52,6 +52,8 @@
 #include "spdk_internal/log.h"
 #include "spdk/string.h"
 
+#include "spdk/hust.h"
+
 #ifdef SPDK_CONFIG_VTUNE
 #include "ittnotify.h"
 #include "ittnotify_types.h"
@@ -1515,6 +1517,25 @@ _spdk_bdev_io_do_submit(struct spdk_bdev_channel *bdev_ch, struct spdk_bdev_io *
 	}
 }
 
+static inline void
+_spdk_bdev_io_do_submit_with_info(struct spdk_bdev_channel *bdev_ch, struct spdk_bdev_io *bdev_io, struct spdk_hust_info *info)
+{
+	struct spdk_bdev *bdev = bdev_io->bdev;
+	struct spdk_io_channel *ch = bdev_ch->channel;
+	struct spdk_bdev_shared_resource *shared_resource = bdev_ch->shared_resource;
+
+	if (spdk_likely(TAILQ_EMPTY(&shared_resource->nomem_io))) {
+		bdev_ch->io_outstanding++;
+		shared_resource->io_outstanding++;
+		bdev_io->internal.in_submit_request = true;
+		bdev->fn_table->submit_request_with_info(ch, bdev_io, info);
+		// bdev_ftl_submit_request_with_info(ch, bdev_io, info);
+		bdev_io->internal.in_submit_request = false;
+	} else {
+		TAILQ_INSERT_TAIL(&shared_resource->nomem_io, bdev_io, internal.link);
+	}
+}
+
 static int
 _spdk_bdev_qos_io_submit(struct spdk_bdev_channel *ch, struct spdk_bdev_qos *qos)
 {
@@ -1855,6 +1876,44 @@ _spdk_bdev_io_submit(void *ctx)
 	bdev_io->internal.in_submit_request = false;
 }
 
+static inline void
+_spdk_bdev_io_submit_with_info(void *ctx, struct spdk_hust_info *info)
+{
+	struct spdk_bdev_io *bdev_io = ctx;
+	struct spdk_bdev *bdev = bdev_io->bdev;
+	struct spdk_bdev_channel *bdev_ch = bdev_io->internal.ch;
+	struct spdk_bdev_shared_resource *shared_resource = bdev_ch->shared_resource;
+	uint64_t tsc;
+
+	tsc = spdk_get_ticks();
+	bdev_io->internal.submit_tsc = tsc;
+	spdk_trace_record_tsc(tsc, TRACE_BDEV_IO_START, 0, 0, (uintptr_t)bdev_io, bdev_io->type);
+
+	if (spdk_likely(bdev_ch->flags == 0)) {
+		_spdk_bdev_io_do_submit_with_info(bdev_ch, bdev_io, info);
+		return;
+	}
+
+	assert(0 && "io shouldn't pass through this path\n\n"); ////////// 
+
+	bdev_ch->io_outstanding++;
+	shared_resource->io_outstanding++;
+	bdev_io->internal.in_submit_request = true;
+	if (bdev_ch->flags & BDEV_CH_RESET_IN_PROGRESS) {
+		spdk_bdev_io_complete(bdev_io, SPDK_BDEV_IO_STATUS_FAILED);
+	} else if (bdev_ch->flags & BDEV_CH_QOS_ENABLED) {
+		bdev_ch->io_outstanding--;
+		shared_resource->io_outstanding--;
+		TAILQ_INSERT_TAIL(&bdev->internal.qos->queued, bdev_io, internal.link);
+		_spdk_bdev_qos_io_submit(bdev_ch, bdev->internal.qos);
+	} else {
+		SPDK_ERRLOG("unknown bdev_ch flag %x found\n", bdev_ch->flags);
+		spdk_bdev_io_complete(bdev_io, SPDK_BDEV_IO_STATUS_FAILED);
+	}
+	bdev_io->internal.in_submit_request = false;
+}
+
+
 static void
 spdk_bdev_io_submit(struct spdk_bdev_io *bdev_io)
 {
@@ -1881,6 +1940,36 @@ spdk_bdev_io_submit(struct spdk_bdev_io *bdev_io)
 		_spdk_bdev_io_submit(bdev_io);
 	}
 }
+
+static void
+spdk_bdev_io_submit_with_info(struct spdk_bdev_io *bdev_io, struct spdk_hust_info *info)
+{
+	struct spdk_bdev *bdev = bdev_io->bdev;
+	struct spdk_thread *thread = spdk_bdev_io_get_thread(bdev_io);
+
+	assert(thread != NULL);
+	assert(bdev_io->internal.status == SPDK_BDEV_IO_STATUS_PENDING);
+
+	if (bdev->split_on_optimal_io_boundary && _spdk_bdev_io_should_split(bdev_io)) {
+		spdk_bdev_io_split(NULL, bdev_io);
+		assert(0 && "io shouldn't be submitted through this path\n\n"); //// check
+		return;
+	}
+	
+	if (bdev_io->internal.ch->flags & BDEV_CH_QOS_ENABLED) {
+		if ((thread == bdev->internal.qos->thread) || !bdev->internal.qos->thread) {
+			_spdk_bdev_io_submit(bdev_io);
+		} else {
+			bdev_io->internal.io_submit_ch = bdev_io->internal.ch;
+			bdev_io->internal.ch = bdev->internal.qos->ch;
+			spdk_thread_send_msg(bdev->internal.qos->thread, _spdk_bdev_io_submit, bdev_io);
+		}
+		assert(0 && "io shouldn't be submitted through this path\n\n"); //// check
+	} else {
+		_spdk_bdev_io_submit_with_info(bdev_io, info);
+	}
+}
+
 
 static void
 spdk_bdev_io_submit_reset(struct spdk_bdev_io *bdev_io)
@@ -2915,6 +3004,45 @@ _spdk_bdev_write_blocks_with_md(struct spdk_bdev_desc *desc, struct spdk_io_chan
 	return 0;
 }
 
+
+static int
+_spdk_bdev_write_blocks_with_md_with_info(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
+				void *buf, void *md_buf, uint64_t offset_blocks, uint64_t num_blocks,
+				spdk_bdev_io_completion_cb cb, void *cb_arg, struct spdk_hust_info *info)
+{
+	struct spdk_bdev *bdev = spdk_bdev_desc_get_bdev(desc);
+	struct spdk_bdev_io *bdev_io;
+	struct spdk_bdev_channel *channel = spdk_io_channel_get_ctx(ch);
+
+	if (!desc->write) {
+		return -EBADF;
+	}
+
+	if (!spdk_bdev_io_valid_blocks(bdev, offset_blocks, num_blocks)) {
+		return -EINVAL;
+	}
+
+	bdev_io = spdk_bdev_get_io(channel);
+	if (!bdev_io) {
+		return -ENOMEM;
+	}
+
+	bdev_io->internal.ch = channel;
+	bdev_io->internal.desc = desc;
+	bdev_io->type = SPDK_BDEV_IO_TYPE_WRITE;
+	bdev_io->u.bdev.iovs = &bdev_io->iov;
+	bdev_io->u.bdev.iovs[0].iov_base = buf;
+	bdev_io->u.bdev.iovs[0].iov_len = num_blocks * bdev->blocklen;
+	bdev_io->u.bdev.iovcnt = 1;
+	bdev_io->u.bdev.md_buf = md_buf;
+	bdev_io->u.bdev.num_blocks = num_blocks;
+	bdev_io->u.bdev.offset_blocks = offset_blocks;
+	spdk_bdev_io_init(bdev_io, bdev, cb_arg, cb);
+
+	spdk_bdev_io_submit_with_info(bdev_io, info);
+	return 0;
+}
+
 int
 spdk_bdev_write(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
 		void *buf, uint64_t offset, uint64_t nbytes,
@@ -2937,6 +3065,15 @@ spdk_bdev_write_blocks(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
 {
 	return _spdk_bdev_write_blocks_with_md(desc, ch, buf, NULL, offset_blocks, num_blocks,
 					       cb, cb_arg);
+}
+
+int
+spdk_bdev_write_blocks_with_info(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
+		       void *buf, uint64_t offset_blocks, uint64_t num_blocks,
+		       spdk_bdev_io_completion_cb cb, void *cb_arg, struct spdk_hust_info *info)
+{
+	return _spdk_bdev_write_blocks_with_md_with_info(desc, ch, buf, NULL, offset_blocks, num_blocks,
+					       cb, cb_arg, info);
 }
 
 int

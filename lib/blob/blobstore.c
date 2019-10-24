@@ -1919,16 +1919,130 @@ _spdk_blob_request_submit_op_single(struct spdk_io_channel *_ch, struct spdk_blo
 				cb_fn(cb_arg, -ENOMEM);
 				return;
 			}
-#ifdef HUST ///////// for absolutely certain, set batch->level and facilate ready to assert channel_io->level == batch->level
-			SPDK_DAPULOG("blob: level: %d, filename: %s\n", blob->level, blob->filename);
-			batch->level = blob->level;	
-			strncpy(batch->filename, blob->filename, sizeof(blob->filename));
-			// assert(blob->level == _ch->level && "batch, blob, _ch, among which individual levels are inconsistent.");
-#endif
+
 			if (op_type == SPDK_BLOB_WRITE) {
 				spdk_bs_batch_write_dev(batch, payload, lba, lba_count);
 			} else {
 				spdk_bs_batch_write_zeroes_dev(batch, lba, lba_count);
+			}
+
+			spdk_bs_batch_close(batch);
+		} else {
+			/* Queue this operation and allocate the cluster */
+			spdk_bs_user_op_t *op;
+
+			op = spdk_bs_user_op_alloc(_ch, &cpl, op_type, blob, payload, 0, offset, length);
+			if (!op) {
+				cb_fn(cb_arg, -ENOMEM);
+				return;
+			}
+
+			_spdk_bs_allocate_and_copy_cluster(blob, _ch, offset, op);
+		}
+		break;
+	}
+	case SPDK_BLOB_UNMAP: {
+		spdk_bs_batch_t *batch;
+
+		batch = spdk_bs_batch_open(_ch, &cpl);
+		if (!batch) {
+			cb_fn(cb_arg, -ENOMEM);
+			return;
+		}
+
+		if (_spdk_bs_io_unit_is_allocated(blob, offset)) {
+			spdk_bs_batch_unmap_dev(batch, lba, lba_count);
+		}
+
+		spdk_bs_batch_close(batch);
+		break;
+	}
+	case SPDK_BLOB_READV:
+	case SPDK_BLOB_WRITEV:
+		SPDK_ERRLOG("readv/write not valid\n");
+		cb_fn(cb_arg, -EINVAL);
+		break;
+	}
+}
+
+static void
+_spdk_blob_request_submit_op_single_with_info(struct spdk_io_channel *_ch, struct spdk_blob *blob,
+				    void *payload, uint64_t offset, uint64_t length,
+				    spdk_blob_op_complete cb_fn, void *cb_arg, enum spdk_blob_op_type op_type, struct spdk_hust_info *info)
+{
+	struct spdk_bs_cpl cpl;
+	uint64_t lba;
+	uint32_t lba_count;
+
+	assert(blob != NULL);
+
+	cpl.type = SPDK_BS_CPL_TYPE_BLOB_BASIC;
+	cpl.u.blob_basic.cb_fn = cb_fn;
+	cpl.u.blob_basic.cb_arg = cb_arg;
+
+	_spdk_blob_calculate_lba_and_lba_count(blob, offset, length, &lba, &lba_count);
+
+	if (blob->frozen_refcnt) {
+		/* This blob I/O is frozen */
+		spdk_bs_user_op_t *op;
+		struct spdk_bs_channel *bs_channel = spdk_io_channel_get_ctx(_ch);
+
+		op = spdk_bs_user_op_alloc(_ch, &cpl, op_type, blob, payload, 0, offset, length);
+		if (!op) {
+			cb_fn(cb_arg, -ENOMEM);
+			return;
+		}
+
+		TAILQ_INSERT_TAIL(&bs_channel->queued_io, op, link);
+
+		return;
+	}
+
+	switch (op_type) {
+	case SPDK_BLOB_READ: {
+		spdk_bs_batch_t *batch;
+
+		batch = spdk_bs_batch_open(_ch, &cpl);
+		if (!batch) {
+			cb_fn(cb_arg, -ENOMEM);
+			return;
+		}
+
+		if (_spdk_bs_io_unit_is_allocated(blob, offset)) {
+			/* Read from the blob */
+			spdk_bs_batch_read_dev(batch, payload, lba, lba_count);
+		} else {
+			/* Read from the backing block device */
+			spdk_bs_batch_read_bs_dev(batch, blob->back_bs_dev, payload, lba, lba_count);
+		}
+
+		spdk_bs_batch_close(batch);
+		break;
+	}
+	case SPDK_BLOB_WRITE:
+	case SPDK_BLOB_WRITE_ZEROES: {
+		if (_spdk_bs_io_unit_is_allocated(blob, offset)) {
+			/* Write to the blob */
+			spdk_bs_batch_t *batch;
+
+			if (lba_count == 0) {
+				cb_fn(cb_arg, 0);
+				return;
+			}
+
+			batch = spdk_bs_batch_open(_ch, &cpl);
+			if (!batch) {
+				cb_fn(cb_arg, -ENOMEM);
+				return;
+			}
+			if (op_type == SPDK_BLOB_WRITE) {
+				spdk_bs_batch_write_dev(batch, payload, lba, lba_count);
+				spdk_bs_batch_write_dev_with_info(batch, payload, lba, lba_count, info);
+			} else {
+				spdk_bs_batch_write_zeroes_dev(batch, lba, lba_count);
+				assert(0 && "batch write zeros shouldn't occur except formatting\n\n"); ////
+				/////// preliminary opinion is that this io path shouldn't pass thtough excepting formatting
+				/////// if formatting's occurred, uncomment this line again.
 			}
 
 			spdk_bs_batch_close(batch);
@@ -1991,6 +2105,33 @@ _spdk_blob_request_submit_op(struct spdk_blob *blob, struct spdk_io_channel *_ch
 		_spdk_blob_request_submit_op_single(_channel, blob, payload, offset, length,
 						    cb_fn, cb_arg, op_type);
 	} else {
+		_spdk_blob_request_submit_op_split(_channel, blob, payload, offset, length,
+						   cb_fn, cb_arg, op_type);
+	}
+}
+
+static void
+_spdk_blob_request_submit_op_with_info(struct spdk_blob *blob, struct spdk_io_channel *_channel,
+			     void *payload, uint64_t offset, uint64_t length,
+			     spdk_blob_op_complete cb_fn, void *cb_arg, enum spdk_blob_op_type op_type, struct spdk_hust_info *info)
+{
+	assert(blob != NULL);
+
+	if (blob->data_ro && op_type != SPDK_BLOB_READ) {
+		cb_fn(cb_arg, -EPERM);
+		return;
+	}
+
+	if (offset + length > _spdk_bs_cluster_to_lba(blob->bs, blob->active.num_clusters)) {
+		cb_fn(cb_arg, -EINVAL);
+		return;
+	}
+
+	if (length <= _spdk_bs_num_io_units_to_cluster_boundary(blob, offset)) {
+		_spdk_blob_request_submit_op_single_with_info(_channel, blob, payload, offset, length,
+						    cb_fn, cb_arg, op_type, info);
+	} else {
+		assert(0 && "enter wrong branch\n"); ////  if testing device's OCSSD, the io path shouldn't pass through.
 		_spdk_blob_request_submit_op_split(_channel, blob, payload, offset, length,
 						   cb_fn, cb_arg, op_type);
 	}
@@ -5960,6 +6101,16 @@ void spdk_blob_io_write(struct spdk_blob *blob, struct spdk_io_channel *channel,
 	_spdk_blob_request_submit_op(blob, channel, payload, offset, length, cb_fn, cb_arg,
 				     SPDK_BLOB_WRITE);
 }
+
+
+void spdk_blob_io_write_with_info(struct spdk_blob *blob, struct spdk_io_channel *channel,
+			void *payload, uint64_t offset, uint64_t length,
+			spdk_blob_op_complete cb_fn, void *cb_arg, struct spdk_hust_info *info)
+{
+	_spdk_blob_request_submit_op_with_info(blob, channel, payload, offset, length, cb_fn, cb_arg,
+				     SPDK_BLOB_WRITE, info);
+}
+
 
 void spdk_blob_io_read(struct spdk_blob *blob, struct spdk_io_channel *channel,
 		       void *payload, uint64_t offset, uint64_t length,

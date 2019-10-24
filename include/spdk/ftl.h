@@ -40,6 +40,7 @@
 #include "spdk/uuid.h"
 #include "spdk/thread.h"
 #include "spdk/bdev.h"
+#include "spdk/hust.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -270,7 +271,9 @@ int spdk_ftl_read(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t
 int spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lba,
 		   size_t lba_cnt,
 		   struct iovec *iov, size_t iov_cnt, spdk_ftl_fn cb_fn, void *cb_arg);
-
+int spdk_ftl_write_with_info(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lba,
+		   size_t lba_cnt,
+		   struct iovec *iov, size_t iov_cnt, spdk_ftl_fn cb_fn, void *cb_arg, struct spdk_hust_info *info);
 /**
  * Submits a flush request to the specified device.
  *

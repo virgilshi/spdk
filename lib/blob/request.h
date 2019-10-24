@@ -37,6 +37,7 @@
 #include "spdk/stdinc.h"
 
 #include "spdk/blob.h"
+#include "spdk/hust.h"
 
 enum spdk_bs_cpl_type {
 	SPDK_BS_CPL_TYPE_NONE,
@@ -141,11 +142,6 @@ struct spdk_bs_request_set {
 	} u;
 
 	TAILQ_ENTRY(spdk_bs_request_set) link;
-
-#ifdef HUST
-	uint8_t		level;
-	char		filename[50];
-#endif
 };
 
 void spdk_bs_call_cpl(struct spdk_bs_cpl *cpl, int bserrno);
@@ -201,6 +197,9 @@ void spdk_bs_batch_read_dev(spdk_bs_batch_t *batch, void *payload,
 void spdk_bs_batch_write_dev(spdk_bs_batch_t *batch, void *payload,
 			     uint64_t lba, uint32_t lba_count);
 
+void spdk_bs_batch_write_dev_with_info(spdk_bs_batch_t *batch, void *payload,
+			     uint64_t lba, uint32_t lba_count, struct spdk_hust_info *info);
+
 void spdk_bs_batch_unmap_dev(spdk_bs_batch_t *batch,
 			     uint64_t lba, uint32_t lba_count);
 
@@ -225,4 +224,8 @@ void spdk_bs_user_op_abort(spdk_bs_user_op_t *op);
 
 void spdk_bs_sequence_to_batch_completion(void *cb_arg, int bserrno);
 
+/////// temporal measure for check corrections
+extern void
+bdev_blob_write_with_info(struct spdk_bs_dev *dev, struct spdk_io_channel *channel, void *payload,
+		uint64_t lba, uint32_t lba_count, struct spdk_bs_dev_cb_args *cb_args, struct spdk_hust_info *info);
 #endif

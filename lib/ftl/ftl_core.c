@@ -1991,16 +1991,42 @@ spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lb
 		return -ENOMEM;
 	}
 
-#ifdef HUST
-	io->level = ch->level; ///////////// deliver level of channel info to one of corresponding io.
-	// SPDK_DAPULOG("io, lba: %lu, lba_cnt: %u, level: %d\n", lba, lba_cnt, io->level);
-	static FILE* f = NULL;
-	if (f == NULL) f = fopen("/root/sl/ftl_info.log", "w");
-	assert(f != NULL && "cannot open special file!!!\n");
-	fprintf(f, "io, lba: %lu, lba_cnt: %u, level: %d, file: %s\n", lba, lba_cnt, io->level, ch->filename);
-	SPDK_DAPULOG("io, lba: %lu, lba_cnt: %u, level: %d, file: %s\n", lba, lba_cnt, io->level, ch->filename);
-	fflush(f);
-#endif
+	ftl_io_write(io);
+
+	return 0;
+}
+
+int
+spdk_ftl_write_with_info(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lba, size_t lba_cnt,
+	       struct iovec *iov, size_t iov_cnt, spdk_ftl_fn cb_fn, void *cb_arg, struct spdk_hust_info *info)
+{
+	struct ftl_io *io;
+
+	if (iov_cnt == 0) {
+		return -EINVAL;
+	}
+
+	if (lba_cnt == 0) {
+		return -EINVAL;
+	}
+
+	if (lba_cnt != ftl_iovec_num_lbks(iov, iov_cnt)) {
+		return -EINVAL;
+	}
+
+	if (!dev->initialized) {
+		return -EBUSY;
+	}
+
+	io = ftl_io_user_init(ch, lba, lba_cnt, iov, iov_cnt, cb_fn, cb_arg, FTL_IO_WRITE);
+	if (!io) {
+		return -ENOMEM;
+	}
+
+	static FILE *f = NULL;
+	if (f == NULL)  f = fopen("/root/sl/io.log", "w");
+	assert(f != NULL && "file can't open\n\n");
+	fprintf(f, "name: %s, level: %d\n", info->name, info->level);
 	ftl_io_write(io);
 
 	return 0;

@@ -218,9 +218,6 @@ struct ftl_io {
 
 	TAILQ_ENTRY(ftl_io)			retry_entry;
 
-#ifdef HUST //////////////// sl
-	uint8_t		level; ////////// indicate which level the io belongs to.
-#endif
 };
 
 /* Metadata IO */

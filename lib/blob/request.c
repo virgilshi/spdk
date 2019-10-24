@@ -41,6 +41,8 @@
 
 #include "spdk_internal/log.h"
 
+#include "spdk/hust.h"
+
 void
 spdk_bs_call_cpl(struct spdk_bs_cpl *cpl, int bserrno)
 {
@@ -372,15 +374,28 @@ spdk_bs_batch_write_dev(spdk_bs_batch_t *batch, void *payload,
 	SPDK_DEBUGLOG(SPDK_LOG_BLOB_RW, "Writing %" PRIu32 " blocks to LBA %" PRIu64 "\n", lba_count, lba);
 
 	set->u.batch.outstanding_ops++;
-#ifdef HUST
-	SPDK_DAPULOG("channel, level: %d, filename: %s\n", channel->dev_channel->level, channel->dev_channel->filename);
-	// assert(channel->dev_channel->level = batch->level && "check whether levels are consistent.");
-	// strncpy(channel->dev_channel->filename, batch->filename, sizeof(batch->filename));
-	
-#endif
+
 	channel->dev->write(channel->dev, channel->dev_channel, payload, lba, lba_count,
 			    &set->cb_args);
 }
+
+void
+spdk_bs_batch_write_dev_with_info(spdk_bs_batch_t *batch, void *payload,
+			uint64_t lba, uint32_t lba_count, struct spdk_hust_info *info)
+{
+	struct spdk_bs_request_set	*set = (struct spdk_bs_request_set *)batch;
+	struct spdk_bs_channel		*channel = set->channel;
+
+	SPDK_DEBUGLOG(SPDK_LOG_BLOB_RW, "Writing %" PRIu32 " blocks to LBA %" PRIu64 "\n", lba_count, lba);
+
+	set->u.batch.outstanding_ops++;
+
+	 channel->dev->write_with_info(channel->dev, channel->dev_channel, payload, lba, lba_count,
+	 		    &set->cb_args, info);
+	// bdev_blob_write_with_info(channel->dev, channel->dev_channel, payload, lba, lba_count,
+	// 		    &set->cb_args, info);
+}
+
 
 void
 spdk_bs_batch_unmap_dev(spdk_bs_batch_t *batch,

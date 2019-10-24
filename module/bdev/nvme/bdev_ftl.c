@@ -47,6 +47,8 @@
 #include "bdev_ftl.h"
 #include "common.h"
 
+#include "spdk/hust.h"
+
 #define FTL_COMPLETION_RING_SIZE 4096
 
 struct ftl_bdev {
@@ -312,6 +314,37 @@ bdev_ftl_writev(struct ftl_bdev *ftl_bdev, struct spdk_io_channel *ch,
 			      bio->u.bdev.iovcnt, bdev_ftl_cb, io);
 }
 
+static int
+bdev_ftl_writev_with_info(struct ftl_bdev *ftl_bdev, struct spdk_io_channel *ch,
+		struct ftl_bdev_io *io, struct spdk_hust_info *info)
+{
+	struct spdk_bdev_io *bio;
+	struct ftl_io_channel *ioch;
+	int rc;
+
+	bio = spdk_bdev_io_from_ctx(io);
+	ioch = spdk_io_channel_get_ctx(ch);
+
+	rc = bdev_ftl_fill_bio(ftl_bdev, ch, io);
+	if (rc) {
+		return rc;
+	}
+
+	// return spdk_ftl_write(ftl_bdev->dev,
+	// 		      ioch->ioch,
+	// 		      bio->u.bdev.offset_blocks,
+	// 		      bio->u.bdev.num_blocks,
+	// 		      bio->u.bdev.iovs,
+	// 		      bio->u.bdev.iovcnt, bdev_ftl_cb, io);
+	return spdk_ftl_write_with_info(ftl_bdev->dev,
+			      ioch->ioch,
+			      bio->u.bdev.offset_blocks,
+			      bio->u.bdev.num_blocks,
+			      bio->u.bdev.iovs,
+			      bio->u.bdev.iovcnt, bdev_ftl_cb, io,
+				  info);				  
+}
+
 static void
 bdev_ftl_get_buf_cb(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io,
 		    bool success)
@@ -369,6 +402,32 @@ _bdev_ftl_submit_request(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_i
 	}
 }
 
+static int
+_bdev_ftl_submit_request_with_info(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io, struct spdk_hust_info *info)
+{
+	struct ftl_bdev *ftl_bdev = (struct ftl_bdev *)bdev_io->bdev->ctxt;
+
+	switch (bdev_io->type) {
+	case SPDK_BDEV_IO_TYPE_READ:
+		spdk_bdev_io_get_buf(bdev_io, bdev_ftl_get_buf_cb,
+				     bdev_io->u.bdev.num_blocks * bdev_io->bdev->blocklen);
+		return 0;
+
+	case SPDK_BDEV_IO_TYPE_WRITE:
+		return bdev_ftl_writev_with_info(ftl_bdev, ch, (struct ftl_bdev_io *)bdev_io->driver_ctx, info);
+
+	case SPDK_BDEV_IO_TYPE_FLUSH:
+		return bdev_ftl_flush(ftl_bdev, ch, (struct ftl_bdev_io *)bdev_io->driver_ctx);
+
+	case SPDK_BDEV_IO_TYPE_WRITE_ZEROES:
+	case SPDK_BDEV_IO_TYPE_RESET:
+	case SPDK_BDEV_IO_TYPE_UNMAP:
+	default:
+		return -ENOTSUP;
+		break;
+	}
+}
+
 static void
 bdev_ftl_submit_request(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io)
 {
@@ -378,6 +437,17 @@ bdev_ftl_submit_request(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io
 		bdev_ftl_complete_io((struct ftl_bdev_io *)bdev_io->driver_ctx, rc);
 	}
 }
+
+void
+bdev_ftl_submit_request_with_info(struct spdk_io_channel *ch, struct spdk_bdev_io *bdev_io, struct spdk_hust_info *info)
+{
+	int rc = _bdev_ftl_submit_request_with_info(ch, bdev_io, info);
+
+	if (spdk_unlikely(rc != 0)) {
+		bdev_ftl_complete_io((struct ftl_bdev_io *)bdev_io->driver_ctx, rc);
+	}
+}
+
 
 static bool
 bdev_ftl_io_type_supported(void *ctx, enum spdk_bdev_io_type io_type)
@@ -485,6 +555,7 @@ bdev_ftl_dump_info_json(void *ctx, struct spdk_json_write_ctx *w)
 static const struct spdk_bdev_fn_table ftl_fn_table = {
 	.destruct		= bdev_ftl_destruct,
 	.submit_request		= bdev_ftl_submit_request,
+	.submit_request_with_info = bdev_ftl_submit_request_with_info, ////////////////////
 	.io_type_supported	= bdev_ftl_io_type_supported,
 	.get_io_channel		= bdev_ftl_get_io_channel,
 	.write_config_json	= bdev_ftl_write_config_json,

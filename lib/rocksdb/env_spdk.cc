@@ -498,13 +498,9 @@ public:
 		   set_channel();
 		   rc = spdk_fs_open_file(g_fs, g_sync_args.channel, name.c_str(),
 						  SPDK_BLOBFS_OPEN_CREATE, &file);
-		//    assert(f != NULL && "f == NULL");
-		//    fprintf(f, "%s - %d\n", name.c_str(), level);
-		//    file->level
-			// level++;
-#ifdef HUST			
-			spdk_fs_set_file_level(file, level);
-#endif
+
+		   spdk_fs_set_file_level(file, level); ////////////// 
+
 		   if (rc == 0) {
 			   
 			   result->reset(new SpdkWritableFile(file));

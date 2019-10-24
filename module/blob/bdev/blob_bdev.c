@@ -40,6 +40,8 @@
 #include "spdk/endian.h"
 #include "spdk/bdev_module.h"
 
+#include "spdk/hust.h"
+
 struct blob_bdev {
 	struct spdk_bs_dev	bs_dev;
 	struct spdk_bdev	*bdev;
@@ -150,6 +152,22 @@ bdev_blob_write(struct spdk_bs_dev *dev, struct spdk_io_channel *channel, void *
 
 	rc = spdk_bdev_write_blocks(__get_desc(dev), channel, payload, lba,
 				    lba_count, bdev_blob_io_complete, cb_args);
+	if (rc == -ENOMEM) {
+		bdev_blob_queue_io(dev, channel, payload, 0, lba,
+				   lba_count, SPDK_BDEV_IO_TYPE_WRITE, cb_args);
+	} else if (rc != 0) {
+		cb_args->cb_fn(cb_args->channel, cb_args->cb_arg, rc);
+	}
+}
+
+static void
+bdev_blob_write_with_info(struct spdk_bs_dev *dev, struct spdk_io_channel *channel, void *payload,
+		uint64_t lba, uint32_t lba_count, struct spdk_bs_dev_cb_args *cb_args, struct spdk_hust_info *info)
+{
+	int rc;
+
+	rc = spdk_bdev_write_blocks_with_info(__get_desc(dev), channel, payload, lba,
+				    lba_count, bdev_blob_io_complete, cb_args, info);
 	if (rc == -ENOMEM) {
 		bdev_blob_queue_io(dev, channel, payload, 0, lba,
 				   lba_count, SPDK_BDEV_IO_TYPE_WRITE, cb_args);
@@ -348,6 +366,7 @@ spdk_bdev_create_bs_dev(struct spdk_bdev *bdev, spdk_bdev_remove_cb_t remove_cb,
 	b->bs_dev.destroy = bdev_blob_destroy;
 	b->bs_dev.read = bdev_blob_read;
 	b->bs_dev.write = bdev_blob_write;
+	b->bs_dev.write_with_info = bdev_blob_write_with_info; /////////////////////
 	b->bs_dev.readv = bdev_blob_readv;
 	b->bs_dev.writev = bdev_blob_writev;
 	b->bs_dev.write_zeroes = bdev_blob_write_zeroes;
@@ -386,5 +405,6 @@ spdk_bdev_create_bs_dev_from_desc(struct spdk_bdev_desc *desc)
 	b->bs_dev.write_zeroes = bdev_blob_write_zeroes;
 	b->bs_dev.unmap = bdev_blob_unmap;
 
+	assert(0 && "shouldn't execute here\n\n"); /////////////// 
 	return &b->bs_dev;
 }

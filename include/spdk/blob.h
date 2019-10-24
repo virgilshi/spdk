@@ -62,6 +62,8 @@
 
 #include "spdk/stdinc.h"
 
+#include "spdk/hust.h" ///////////////
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -169,6 +171,10 @@ struct spdk_bs_dev {
 	void (*write)(struct spdk_bs_dev *dev, struct spdk_io_channel *channel, void *payload,
 		      uint64_t lba, uint32_t lba_count,
 		      struct spdk_bs_dev_cb_args *cb_args);
+
+	void (*write_with_info)(struct spdk_bs_dev *dev, struct spdk_io_channel *channel, void *payload,
+		      uint64_t lba, uint32_t lba_count,
+		      struct spdk_bs_dev_cb_args *cb_args, struct spdk_hust_info *info);
 
 	void (*readv)(struct spdk_bs_dev *dev, struct spdk_io_channel *channel,
 		      struct iovec *iov, int iovcnt,
@@ -696,6 +702,9 @@ void spdk_blob_io_write(struct spdk_blob *blob, struct spdk_io_channel *channel,
 			void *payload, uint64_t offset, uint64_t length,
 			spdk_blob_op_complete cb_fn, void *cb_arg);
 
+void spdk_blob_io_write_with_info(struct spdk_blob *blob, struct spdk_io_channel *channel,
+			void *payload, uint64_t offset, uint64_t length,
+			spdk_blob_op_complete cb_fn, void *cb_arg, struct spdk_hust_info *info);
 /**
  * Read data from a blob.
  *

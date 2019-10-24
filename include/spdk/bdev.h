@@ -47,6 +47,8 @@
 #include "spdk/histogram_data.h"
 #include "spdk/dif.h"
 
+#include "spdk/hust.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -844,6 +846,10 @@ int spdk_bdev_write_blocks(struct spdk_bdev_desc *desc, struct spdk_io_channel *
 			   void *buf, uint64_t offset_blocks, uint64_t num_blocks,
 			   spdk_bdev_io_completion_cb cb, void *cb_arg);
 
+int
+spdk_bdev_write_blocks_with_info(struct spdk_bdev_desc *desc, struct spdk_io_channel *ch,
+		       void *buf, uint64_t offset_blocks, uint64_t num_blocks,
+		       spdk_bdev_io_completion_cb cb, void *cb_arg, struct spdk_hust_info *info);
 /**
  * Submit a write request to the bdev on the given channel. This function uses
  * separate buffer for metadata transfer (valid only if bdev supports this

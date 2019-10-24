@@ -119,11 +119,6 @@ struct spdk_blob {
 	spdk_blob_id	id;
 	spdk_blob_id	parent_id;
 
-#ifdef HUST
-	uint8_t		level;
-	char		filename[50];
-#endif
-
 	enum spdk_blob_state		state;
 
 	/* Two copies of the mutable data. One is a version
@@ -204,11 +199,6 @@ struct spdk_bs_channel {
 
 	TAILQ_HEAD(, spdk_bs_request_set) need_cluster_alloc;
 	TAILQ_HEAD(, spdk_bs_request_set) queued_io;
-
-#ifdef HUST
-	uint8_t		level;
-	char		filename[50];
-#endif
 };
 
 /** operation type */

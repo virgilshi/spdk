@@ -49,6 +49,9 @@
 #include "spdk/util.h"
 #include "spdk/uuid.h"
 
+#include "spdk/hust.h"  /////////
+
+
 /** Block device module */
 struct spdk_bdev_module {
 	/**
@@ -181,6 +184,8 @@ struct spdk_bdev_fn_table {
 
 	/** Process the IO. */
 	void (*submit_request)(struct spdk_io_channel *ch, struct spdk_bdev_io *);
+
+	void (*submit_request_with_info)(struct spdk_io_channel *ch, struct spdk_bdev_io *, struct spdk_hust_info *info); //////////////////////
 
 	/** Check if the block device supports a specific I/O type. */
 	bool (*io_type_supported)(void *ctx, enum spdk_bdev_io_type);
@@ -403,9 +408,6 @@ struct spdk_bdev {
 		bool	histogram_enabled;
 		bool	histogram_in_progress;
 
-#ifdef HUST
-		uint8_t	level;
-#endif
 	} internal;
 };
 
@@ -429,10 +431,6 @@ struct spdk_bdev_io {
 
 	/** Enumerated value representing the I/O type. */
 	uint8_t type;
-
-#ifdef HUST
-	uint8_t level;
-#endif
 
 	/** A single iovec element for use by this bdev_io. */
 	struct iovec iov;
