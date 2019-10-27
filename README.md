@@ -219,3 +219,10 @@ vfio.
 For additional details on how to get more involved in the community, including
 [contributing code](http://www.spdk.io/development) and participating in discussions and other activities, please
 refer to [spdk.io](http://www.spdk.io/community)
+
+
+# BRANCH EXPLANATIONS
+
+fix-out-of-order: fix the out-of-order issue and implement semantic delivery from Rocksdb to SPDK, e.g., level-temperature.
+
+understand: understand blobfs, bdev and FTLs, and delete it if necessary.
