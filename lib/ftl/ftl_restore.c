@@ -240,7 +240,7 @@ ftl_restore_check_seq(const struct ftl_restore *restore)
 		if (rband->md_status != FTL_MD_SUCCESS) {
 			continue;
 		}
-
+		SPDK_DAPULOG("band: %u, band->seq = %d\n", rband->band->id, rband->band->seq);
 		next_band = LIST_NEXT(rband->band, list_entry);
 		if (next_band && rband->band->seq == next_band->seq) {
 			return -1;
@@ -285,7 +285,7 @@ ftl_restore_head_complete(struct ftl_restore *restore)
 	if (!ftl_restore_head_valid(dev, restore, &num_valid)) {
 		goto out;
 	}
-
+	SPDK_DAPULOG("num_valid: %lu\n", num_valid);
 	if (num_valid == 0) {
 		SPDK_ERRLOG("Couldn't find any valid bands\n");
 		goto out;
@@ -316,7 +316,7 @@ ftl_restore_head_cb(struct ftl_io *io, void *ctx, int status)
 	rband->md_status = status;
 	num_ios = __atomic_fetch_sub(&restore->num_ios, 1, __ATOMIC_SEQ_CST);
 	assert(num_ios > 0);
-
+	SPDK_DAPULOG("num_ios: %u, io->lba: %lx, io->ppa: %lx\n", num_ios, io->lba.single, ftl_ppa_addr_pack(io->dev,io->ppa));
 	if (num_ios == 1) {
 		ftl_restore_head_complete(restore);
 	}
@@ -339,7 +339,7 @@ ftl_restore_head_md(void *ctx)
 		lba_map = &rband->band->lba_map;
 
 		lba_map->dma_buf = restore->md_buf + i * ftl_head_md_num_lbks(dev) * FTL_BLOCK_SIZE;
-
+		SPDK_DAPULOG("band: %d\n", i);
 		if (ftl_band_read_head_md(rband->band, ftl_restore_head_cb, rband)) {
 			if (spdk_likely(rband->band->num_chunks)) {
 				SPDK_ERRLOG("Failed to read metadata on band %zu\n", i);

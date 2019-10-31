@@ -107,10 +107,14 @@ hello_read(void *arg)
 	struct hello_context_t *hello_context = arg;
 	int rc = 0;
 	uint32_t length = spdk_bdev_get_block_size(hello_context->bdev);
+	static uint32_t lba = 0;
 
 	SPDK_NOTICELOG("Reading io\n");
+
 	rc = spdk_bdev_read(hello_context->bdev_desc, hello_context->bdev_io_channel,
-			    hello_context->buff, 0, length, read_complete, hello_context);
+			    hello_context->buff, lba, length, read_complete, hello_context);
+
+	lba += length;
 
 	if (rc == -ENOMEM) {
 		SPDK_NOTICELOG("Queueing io\n");
@@ -163,10 +167,16 @@ hello_write(void *arg)
 	struct hello_context_t *hello_context = arg;
 	int rc = 0;
 	uint32_t length = spdk_bdev_get_block_size(hello_context->bdev);
+	static uint32_t lba = 0;
 
 	SPDK_NOTICELOG("Writing to the bdev\n");
+	
+	snprintf(hello_context->buff, length, "Hello, hust: %u!", lba);
+
 	rc = spdk_bdev_write(hello_context->bdev_desc, hello_context->bdev_io_channel,
-			     hello_context->buff, 0, length, write_complete, hello_context);
+			     hello_context->buff, lba, length, write_complete, hello_context);
+	
+	lba += length;
 
 	if (rc == -ENOMEM) {
 		SPDK_NOTICELOG("Queueing io\n");
@@ -245,7 +255,7 @@ hello_start(void *arg1)
 		spdk_app_stop(-1);
 		return;
 	}
-	snprintf(hello_context->buff, blk_size, "%s", "Hello World!\n");
+	
 
 	hello_write(hello_context);
 }
@@ -259,7 +269,7 @@ main(int argc, char **argv)
 
 	/* Set default values in opts structure. */
 	spdk_app_opts_init(&opts);
-	opts.name = "hello_bdev";
+	opts.name = "dev_test";
 
 	/*
 	 * The user can provide the config file and bdev name at run time.
@@ -296,5 +306,17 @@ main(int argc, char **argv)
 
 	/* Gracefully close out all of the SPDK subsystems. */
 	spdk_app_fini();
+
+
+	// rc = spdk_app_start(&opts, hello_start, &hello_context);
+	// if (rc) {
+	// 	SPDK_ERRLOG("2 - ERROR starting application\n");
+	// }
+
+	// /* When the app stops, free up memory that we allocated. */
+	// spdk_dma_free(hello_context.buff);
+
+	// /* Gracefully close out all of the SPDK subsystems. */
+	// spdk_app_fini();
 	return rc;
 }
