@@ -337,15 +337,18 @@ spdk_app_setup_signal_handlers(struct spdk_app_opts *opts)
 
 static void
 spdk_app_start_application(void)
-{
+{ 
+	SPDK_DAPULOG("********enter spdk_app_start_application\n");
 	assert(spdk_get_thread() == g_app_thread);
-
+	
 	g_start_fn(g_start_arg);
+	SPDK_DAPULOG("********leave spdk_app_start_application\n");
 }
 
 static void
 spdk_app_start_rpc(int rc, void *arg1)
 {
+	SPDK_DAPULOG("********enter spdk_app_start_rpc, rc = %d\n", rc);
 	if (rc) {
 		spdk_app_stop(rc);
 		return;
@@ -356,6 +359,7 @@ spdk_app_start_rpc(int rc, void *arg1)
 		spdk_rpc_set_state(SPDK_RPC_RUNTIME);
 		spdk_app_start_application();
 	}
+	SPDK_DAPULOG("********enter spdk_app_start_rpc, rc = %d\n", rc);
 }
 
 static struct spdk_conf *
@@ -555,12 +559,14 @@ spdk_app_setup_trace(struct spdk_app_opts *opts)
 static void
 bootstrap_fn(void *arg1)
 {
+	SPDK_DAPULOG("***start to bootstrap_fn\n");
 	if (g_spdk_app.json_config_file) {
 		g_delay_subsystem_init = false;
 		spdk_app_json_config_load(g_spdk_app.json_config_file, g_spdk_app.rpc_addr, spdk_app_start_rpc,
 					  NULL);
 	} else {
 		if (!g_delay_subsystem_init) {
+			SPDK_DAPULOG("***start to spdk_subsystem_init(spdk_app_start_rpc)\n");
 			spdk_subsystem_init(spdk_app_start_rpc, NULL);
 		} else {
 			spdk_rpc_initialize(g_spdk_app.rpc_addr);
@@ -614,7 +620,7 @@ spdk_app_start(struct spdk_app_opts *opts, spdk_msg_fn start_fn,
 	if (config == NULL) {
 		goto app_start_setup_conf_err;
 	}
-
+	SPDK_DAPULOG("setup conf\n");
 	if (spdk_app_read_config_file_global_params(opts) < 0) {
 		goto app_start_setup_conf_err;
 	}
@@ -638,7 +644,7 @@ spdk_app_start(struct spdk_app_opts *opts, spdk_msg_fn start_fn,
 		SPDK_ERRLOG("Reactor Initilization failed: rc = %d\n", rc);
 		goto app_start_log_close_err;
 	}
-
+	SPDK_DAPULOG("complete spdk_reacter\n");
 	tmp_cpumask = spdk_cpuset_alloc();
 	if (tmp_cpumask == NULL) {
 		SPDK_ERRLOG("spdk_cpuset_alloc() failed\n");
@@ -651,6 +657,8 @@ spdk_app_start(struct spdk_app_opts *opts, spdk_msg_fn start_fn,
 	/* Now that the reactors have been initialized, we can create an
 	 * initialization thread. */
 	g_app_thread = spdk_thread_create("app_thread", tmp_cpumask);
+
+	SPDK_DAPULOG("create thread serverd for bootstrap_fn\n");
 	spdk_cpuset_free(tmp_cpumask);
 	if (!g_app_thread) {
 		SPDK_ERRLOG("Unable to create an spdk_thread for initialization\n");
@@ -684,9 +692,12 @@ spdk_app_start(struct spdk_app_opts *opts, spdk_msg_fn start_fn,
 	g_start_fn = start_fn;
 	g_start_arg = arg1;
 
+	SPDK_DAPULOG("start to send msg of bootstrap_fn to a_app_thread\n");
 	spdk_thread_send_msg(g_app_thread, bootstrap_fn, NULL);
+	SPDK_DAPULOG("end to send msg of bootstrap_fn to a_app_thread\n");
 
 	/* This blocks until spdk_app_stop is called */
+	SPDK_DAPULOG("start to reactor and block until complettion\n");
 	spdk_reactors_start();
 
 	return g_spdk_app.rc;

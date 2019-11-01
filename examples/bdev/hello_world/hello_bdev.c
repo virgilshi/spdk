@@ -200,6 +200,7 @@ hello_write(void *arg)
 static void
 hello_start(void *arg1)
 {
+	SPDK_DAPULOG("enter hello_start\n");
 	struct hello_context_t *hello_context = arg1;
 	uint32_t blk_size, buf_align;
 	int rc = 0;
@@ -258,6 +259,7 @@ hello_start(void *arg1)
 	
 
 	hello_write(hello_context);
+	SPDK_DAPULOG("enter hello_start\n");
 }
 
 int

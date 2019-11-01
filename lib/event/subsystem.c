@@ -120,6 +120,7 @@ subsystem_sort(void)
 void
 spdk_subsystem_init_next(int rc)
 {
+	SPDK_DAPULOG("enter spdk_subsystem_init_next(rc = %d)\n", rc);
 	/* The initialization is interrupted by the spdk_subsystem_fini, so just return */
 	if (g_subsystems_init_interrupted) {
 		return;
@@ -138,6 +139,7 @@ spdk_subsystem_init_next(int rc)
 	}
 
 	if (!g_next_subsystem) {
+		SPDK_DAPULOG("start g_subsystem_start_fn\n");
 		g_subsystems_initialized = true;
 		g_subsystem_start_fn(0, g_subsystem_start_arg);
 		return;
@@ -148,11 +150,13 @@ spdk_subsystem_init_next(int rc)
 	} else {
 		spdk_subsystem_init_next(0);
 	}
+	SPDK_DAPULOG("leave spdk_subsystem_init_next(rc = %d)\n", rc);
 }
 
 void
 spdk_subsystem_init(spdk_subsystem_init_fn cb_fn, void *cb_arg)
 {
+	SPDK_DAPULOG("***enter spdk_subsystem_init\n");
 	struct spdk_subsystem_depend *dep;
 
 	g_subsystem_start_fn = cb_fn;
@@ -160,6 +164,7 @@ spdk_subsystem_init(spdk_subsystem_init_fn cb_fn, void *cb_arg)
 
 	/* Verify that all dependency name and depends_on subsystems are registered */
 	TAILQ_FOREACH(dep, &g_subsystems_deps, tailq) {
+		SPDK_DAPULOG("***dep->name = %s, dep->depends_on = %s\n", dep->name, dep->depends_on);
 		if (!spdk_subsystem_find(&g_subsystems, dep->name)) {
 			SPDK_ERRLOG("subsystem %s is missing\n", dep->name);
 			g_subsystem_start_fn(-1, g_subsystem_start_arg);
@@ -176,6 +181,7 @@ spdk_subsystem_init(spdk_subsystem_init_fn cb_fn, void *cb_arg)
 	subsystem_sort();
 
 	spdk_subsystem_init_next(0);
+	SPDK_DAPULOG("***leave spdk_subsystem_init\n");
 }
 
 static void

@@ -8,7 +8,7 @@ do
 			make clean
 			./configure --enable-debug 
 		    #./configure --enable-debug --with-ftl
-			make
+			make -j32
 			;;
 		s)
 			echo "scripts/setup.sh"

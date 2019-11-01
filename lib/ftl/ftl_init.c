@@ -1095,6 +1095,7 @@ ftl_dev_init_io_channel(struct spdk_ftl_dev *dev)
 int
 spdk_ftl_dev_init(const struct spdk_ftl_dev_init_opts *_opts, spdk_ftl_init_fn cb_fn, void *cb_arg)
 {
+	SPDK_DAPULOG("enter spdk_ftl_dev_init");
 	struct spdk_ftl_dev *dev;
 	struct spdk_ftl_dev_init_opts opts = *_opts;
 

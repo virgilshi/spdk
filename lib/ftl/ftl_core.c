@@ -1986,6 +1986,7 @@ spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lb
 		return -EBUSY;
 	}
 
+	SPDK_DAPULOG("lba = %lx, lba_cnt = %lx\n", lba, lba_cnt);
 	io = ftl_io_user_init(ch, lba, lba_cnt, iov, iov_cnt, cb_fn, cb_arg, FTL_IO_WRITE);
 	if (!io) {
 		return -ENOMEM;

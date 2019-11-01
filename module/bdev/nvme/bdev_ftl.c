@@ -792,6 +792,8 @@ bdev_ftl_create(struct spdk_nvme_ctrlr *ctrlr, const struct ftl_bdev_init_opts *
 	struct spdk_ftl_dev_init_opts opts = {};
 	int rc;
 
+	SPDK_DAPULOG("enter bdev_ftl_create\n");
+
 	ftl_ctrlr = bdev_ftl_add_ctrlr(ctrlr, &bdev_opts->trid);
 	if (!ftl_ctrlr) {
 		spdk_nvme_detach(ctrlr);
@@ -856,6 +858,8 @@ bdev_ftl_create(struct spdk_nvme_ctrlr *ctrlr, const struct ftl_bdev_init_opts *
 		goto error_cache;
 	}
 
+	SPDK_DAPULOG("leave bdev_ftl_create\n");
+
 	return 0;
 
 error_cache:
@@ -910,6 +914,7 @@ bdev_ftl_init_cb(const struct ftl_bdev_info *info, void *ctx, int status)
 static void
 bdev_ftl_initialize_cb(void *ctx, int status)
 {
+	SPDK_DAPULOG("enter bdev_ftl_initialize_cb\n");
 	struct spdk_conf_section *sp;
 	struct ftl_bdev_init_opts *opts = NULL;
 	struct ftl_deferred_init *defer_opts;
@@ -957,12 +962,14 @@ out:
 		spdk_bdev_module_init_done(&g_ftl_if);
 	}
 
+	SPDK_DAPULOG("********leave bdev_ftl_initialize_cb\n");
 	free(opts);
 }
 
 static int
 bdev_ftl_initialize(void)
 {
+	SPDK_DAPULOG("********enter bdev_ftl_initialize\n");
 	struct ftl_module_init_opts ftl_opts = {};
 	pthread_mutexattr_t attr;
 	int rc = 0;
@@ -994,6 +1001,8 @@ bdev_ftl_initialize(void)
 	}
 error:
 	pthread_mutexattr_destroy(&attr);
+	
+	SPDK_DAPULOG("********leave bdev_ftl_initialize, rc = %d\n", rc);
 	return rc;
 }
 

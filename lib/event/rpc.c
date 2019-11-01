@@ -55,6 +55,7 @@ spdk_rpc_subsystem_poll(void *arg)
 void
 spdk_rpc_initialize(const char *listen_addr)
 {
+	SPDK_DAPULOG("enter spdk_rpc_init(listen_addr = %s)\n", listen_addr);
 	int rc;
 
 	if (listen_addr == NULL) {
@@ -72,6 +73,7 @@ spdk_rpc_initialize(const char *listen_addr)
 
 	/* Register a poller to periodically check for RPCs */
 	g_rpc_poller = spdk_poller_register(spdk_rpc_subsystem_poll, NULL, RPC_SELECT_INTERVAL);
+	SPDK_DAPULOG("leave spdk_rpc_init(listen_addr = %s)\n", listen_addr);
 }
 
 void
