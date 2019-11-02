@@ -34,13 +34,13 @@
 SPDK_ROOT_DIR := $(abspath $(CURDIR)/..)
 include $(SPDK_ROOT_DIR)/mk/spdk.common.mk
 
-DIRS-y = bdev blob copy event sock
+DIRS-y = bdev blob copy event sock ftl
 
 DEPDIRS-blob :=
 DEPDIRS-copy :=
 DEPDIRS-sock :=
-DEPDIRS-bdev := blob
-DEPDIRS-event := bdev blob
+# DEPDIRS-bdev := blob
+# DEPDIRS-event := bdev blob
 
 .PHONY: all clean $(DIRS-y)
 
