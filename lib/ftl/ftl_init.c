@@ -67,13 +67,13 @@ static pthread_mutex_t			g_ftl_queue_lock = PTHREAD_MUTEX_INITIALIZER;
 static const struct spdk_ftl_conf	g_default_conf = {
 	.limits = {
 		/* 5 free bands  / 0 % host writes */
-		[SPDK_FTL_LIMIT_CRIT]  = { .thld = 410, .limit = 0 },
+		[SPDK_FTL_LIMIT_CRIT]  = { .thld = 5, .limit = 0 },
 		/* 10 free bands / 5 % host writes */
-		[SPDK_FTL_LIMIT_HIGH]  = { .thld = 430, .limit = 5 },
+		[SPDK_FTL_LIMIT_HIGH]  = { .thld = 10, .limit = 5 },
 		/* 20 free bands / 40 % host writes */
-		[SPDK_FTL_LIMIT_LOW]   = { .thld = 450, .limit = 40 },
+		[SPDK_FTL_LIMIT_LOW]   = { .thld = 15, .limit = 40 },
 		/* 40 free bands / 100 % host writes - defrag starts running */
-		[SPDK_FTL_LIMIT_START] = { .thld = 490, .limit = 100 },
+		[SPDK_FTL_LIMIT_START] = { .thld = 19, .limit = 100 },
 	},
 	/* 10 percent valid lbks */
 	.invalid_thld = 10,
@@ -371,7 +371,7 @@ ftl_dev_init_bands(struct spdk_ftl_dev *dev)
 			band = &dev->bands[j];
 			chunk = &band->chunk_buf[i];
 			chunk->pos = i;
-			if (j < 10) chunk->state = FTL_CHUNK_STATE_BAD;
+			if (j < 100 || j > 200) chunk->state = FTL_CHUNK_STATE_BAD;
 			else chunk->state = ftl_get_chunk_state(&info[j]);
 			chunk->punit = punit;
 			chunk->start_ppa = punit->start_ppa;
@@ -388,13 +388,13 @@ ftl_dev_init_bands(struct spdk_ftl_dev *dev)
 	for (i = 0; i < ftl_dev_num_bands(dev); ++i) {
 		band = &dev->bands[i];
 		band->tail_md_ppa = ftl_band_tail_md_ppa(band);
-#ifdef DAPU_PRINT
+// #ifdef DAPU_PRINT
 		SPDK_DAPULOG("Operational chunks in band(%u):", band->id);
 		CIRCLEQ_FOREACH(chunk, &band->chunks, circleq) {
 			printf(" %u", chunk->pos);
 		}
 		printf("\n");
-#endif		
+// #endif		
 	}
 
 	ftl_remove_empty_bands(dev);

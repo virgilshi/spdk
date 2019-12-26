@@ -40,7 +40,7 @@ do
 			;;
 		p)
 			echo "perf test"
-			./test/bdev/bdevperf/bdevperf -q 1 -s 1024 -w randwrite -t 900 -o 4096 -m 0x1 -c /root/bdev.conf
+			./test/bdev/bdevperf/bdevperf -q 1 -s 1024 -w randwrite -t 3600 -o 4096 -m 0x1 -c /root/bdev.conf
 			;;
 		w)
 			echo "PCIe perf test"

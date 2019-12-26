@@ -249,11 +249,11 @@ ftl_reloc_write_cb(struct ftl_io *io, void *arg, int status)
 
 	breloc->num_outstanding--;
 
-#ifdef DAPU_PRINT
+// #ifdef DAPU_PRINT
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->ppa.grp, move->ppa.pu, move->ppa.chk, move->ppa.lbk,
 		move->io->band->id,
 		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
-#endif
+// #endif
 
 	if (status) {
 		SPDK_ERRLOG("Reloc write failed with status: %d\n", status);
