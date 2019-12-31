@@ -164,7 +164,7 @@ struct ftl_band {
 	CIRCLEQ_HEAD(, ftl_chunk)		chunks;
 
 	/* LBA map */
-	struct ftl_lba_map			lba_map;
+	struct ftl_lba_map			lba_map; 
 
 	/* Band's state */
 	enum ftl_band_state			state;

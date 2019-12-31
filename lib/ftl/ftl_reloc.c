@@ -278,11 +278,11 @@ ftl_reloc_read_cb(struct ftl_io *io, void *arg, int status)
 
 	breloc->num_outstanding--;
 
-#ifdef DAPU_PRINT
+// #ifdef DAPU_PRINT
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->ppa.grp, move->ppa.pu, move->ppa.chk, move->ppa.lbk,
 		move->io->band->id,
 		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
-#endif
+// #endif
 
 	/* TODO: We should handle fail on relocation read. We need to inform */
 	/* user that this group of blocks is bad (update l2p with bad block address and */
@@ -482,12 +482,12 @@ ftl_reloc_write(struct ftl_band_reloc *breloc, struct ftl_reloc_move *move)
 
 	breloc->num_outstanding++;
 
-#ifdef DAPU_PRINT	
+// #ifdef DAPU_PRINT	
 //	SPDK_DAPULOG("***** lba = %20lx(%u), ppa = %20lx\n", move->io->lba.single, move->io->lbk_cnt, ftl_ppa_addr_pack(move->io->dev, move->io->ppa));
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", move->io->ppa.grp, move->io->ppa.pu, move->io->ppa.chk, move->io->ppa.lbk, 
 		move->io->band->id,
 		ftl_ppa_addr_pack(breloc->band->dev, move->io->ppa));
-#endif
+// #endif
 
 	ftl_io_write(move->io);
 	return 0;
@@ -519,12 +519,12 @@ ftl_reloc_read(struct ftl_band_reloc *breloc, struct ftl_reloc_move *move)
 	}
 
 	breloc->num_outstanding++;
-#ifdef DAPU_PRINT
+// #ifdef DAPU_PRINT
 	//SPDK_DAPULOG("***** lba = %lx(%u), ppa = %lx\n", move->io->lba.single, move->io->lbk_cnt, ftl_ppa_addr_pack(move->io->dev, move->io->ppa));
 	SPDK_DAPULOG("*** ppa: group(%u), pu(%u), chunk(%u), block(%04u), band(%03u) - %llx\n", ppa.grp, ppa.pu, ppa.chk, ppa.lbk, 
 		move->io->band->id,
 		ftl_ppa_addr_pack(breloc->band->dev, ppa));
-#endif
+// #endif
 	ftl_io_read(move->io);
 	return 0;
 }

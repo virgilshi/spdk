@@ -1990,7 +1990,9 @@ spdk_ftl_write(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lb
 	if (!io) {
 		return -ENOMEM;
 	}
-
+#ifdef DAPU_PRINT
+	SPDK_DAPULOG("lba: %10lu, size: %2u\n", lba, lba_cnt);
+#endif
 	ftl_io_write(io);
 
 	return 0;
@@ -2054,7 +2056,9 @@ spdk_ftl_read(struct spdk_ftl_dev *dev, struct spdk_io_channel *ch, uint64_t lba
 	if (!io) {
 		return -ENOMEM;
 	}
-
+#ifdef DAPU_PRINT	
+	SPDK_DAPULOG("lba: %10lu, size: %2u\n", lba, lba_cnt);
+#endif	
 	ftl_io_read(io);
 	return 0;
 }
